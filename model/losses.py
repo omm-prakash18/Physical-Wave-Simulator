@@ -1,0 +1,177 @@
+"""
+Loss functions for the Latent Video Prediction model.
+
+Four components:
+  1. L_recon:      Pixel-space L1 between predicted and GT frames
+  2. L_latent:     MSE in latent space (primary Transformer training signal)
+  3. L_perceptual: Feature-space L1 using frozen encoder features
+  4. L_temporal:   Temporal consistency — penalizes motion inconsistency
+
+All components are logged separately.
+"""
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from copy import deepcopy
+
+
+class ReconstructionLoss(nn.Module):
+    """L1 loss between predicted and ground-truth frames."""
+
+    def forward(
+        self,
+        predicted: torch.Tensor,
+        target: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            predicted: (B, T, C, H, W)
+            target: (B, T, C, H, W)
+        """
+        return F.l1_loss(predicted, target)
+
+
+class LatentPredictionLoss(nn.Module):
+    """MSE loss between predicted and encoded GT latent vectors."""
+
+    def forward(
+        self,
+        predicted_latents: torch.Tensor,
+        target_latents: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            predicted_latents: (B, T, d_model)
+            target_latents: (B, T, d_model)
+        """
+        return F.mse_loss(predicted_latents, target_latents)
+
+
+class PerceptualLoss(nn.Module):
+    """
+    Feature-space L1 loss to discourage blurry predictions.
+
+    Uses a frozen copy of the encoder's first 2 convolutional stages
+    as a feature extractor. Computes L1 distance in feature space.
+    """
+
+    def __init__(self, encoder: nn.Module):
+        super().__init__()
+        # Deep copy and freeze first 2 stages of the encoder
+        self.feature_extractor = deepcopy(nn.Sequential(*list(encoder.stages[:2])))
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False
+
+    def _extract(self, x: torch.Tensor) -> torch.Tensor:
+        """Extract features from frames (B*T, C, H, W)."""
+        return self.feature_extractor(x)
+
+    def forward(
+        self,
+        predicted: torch.Tensor,
+        target: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            predicted: (B, T, C, H, W)
+            target: (B, T, C, H, W)
+        """
+        B, T, C, H, W = predicted.shape
+        pred_flat = predicted.reshape(B * T, C, H, W)
+        tgt_flat = target.reshape(B * T, C, H, W)
+
+        pred_feat = self._extract(pred_flat)
+        tgt_feat = self._extract(tgt_flat)
+
+        return F.l1_loss(pred_feat, tgt_feat)
+
+
+class TemporalConsistencyLoss(nn.Module):
+    """
+    Penalizes inconsistent temporal dynamics.
+
+    Computes the MSE between frame-to-frame differences in predicted
+    vs. ground-truth sequences. This encourages the model to predict
+    consistent motion rather than producing flickering frames.
+    """
+
+    def forward(
+        self,
+        predicted: torch.Tensor,
+        target: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            predicted: (B, T, C, H, W)
+            target: (B, T, C, H, W)
+        """
+        # Frame-to-frame differences
+        pred_diff = predicted[:, 1:] - predicted[:, :-1]  # (B, T-1, C, H, W)
+        tgt_diff = target[:, 1:] - target[:, :-1]
+
+        return F.mse_loss(pred_diff, tgt_diff)
+
+
+class CombinedLoss(nn.Module):
+    """
+    Weighted combination of all loss components.
+
+    Returns total loss and a dict of individual component values for logging.
+    """
+
+    def __init__(
+        self,
+        encoder: nn.Module,
+        lambda_recon: float = 1.0,
+        lambda_latent: float = 1.0,
+        lambda_perceptual: float = 0.1,
+        lambda_temporal: float = 0.5,
+    ):
+        super().__init__()
+
+        self.lambda_recon = lambda_recon
+        self.lambda_latent = lambda_latent
+        self.lambda_perceptual = lambda_perceptual
+        self.lambda_temporal = lambda_temporal
+
+        self.recon_loss = ReconstructionLoss()
+        self.latent_loss = LatentPredictionLoss()
+        self.perceptual_loss = PerceptualLoss(encoder)
+        self.temporal_loss = TemporalConsistencyLoss()
+
+    def forward(
+        self,
+        predicted_frames: torch.Tensor,
+        target_frames: torch.Tensor,
+        predicted_latents: torch.Tensor,
+        target_latents: torch.Tensor,
+    ) -> tuple[torch.Tensor, dict[str, float]]:
+        """
+        Compute combined loss.
+
+        Returns:
+            total_loss: Scalar loss tensor for backpropagation.
+            components: Dict of individual loss values (detached floats) for logging.
+        """
+        l_recon = self.recon_loss(predicted_frames, target_frames)
+        l_latent = self.latent_loss(predicted_latents, target_latents)
+        l_perceptual = self.perceptual_loss(predicted_frames, target_frames)
+        l_temporal = self.temporal_loss(predicted_frames, target_frames)
+
+        total = (
+            self.lambda_recon * l_recon
+            + self.lambda_latent * l_latent
+            + self.lambda_perceptual * l_perceptual
+            + self.lambda_temporal * l_temporal
+        )
+
+        components = {
+            "loss/total": total.item(),
+            "loss/recon": l_recon.item(),
+            "loss/latent": l_latent.item(),
+            "loss/perceptual": l_perceptual.item(),
+            "loss/temporal": l_temporal.item(),
+        }
+
+        return total, components

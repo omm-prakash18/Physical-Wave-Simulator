@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Datasets
+data/wave_64/
+*.npz
+
+# Checkpoints & Runs
+checkpoints/
+runs/
+eval_output/
+
+# OS/IDE configs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node.js dependencies & builds
+node_modules/
+dist/
+.svelte-kit/
+.next/
+out/
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Gemini/Agent workspace
+.agents/
+.gemini/
+.system_generated/
+task.md
+walkthrough.md
+implementation_plan.md

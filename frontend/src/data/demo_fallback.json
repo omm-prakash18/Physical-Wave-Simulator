@@ -1,0 +1,31 @@
+{
+  "samples": [
+    {
+      "id": 0,
+      "context_frames": [],
+      "predicted_frames": [],
+      "ground_truth_frames": [],
+      "psnr_per_step": [34.2, 31.8, 29.5, 27.9, 26.4, 25.1, 24.0, 23.1, 22.3, 21.6],
+      "ssim_per_step": [0.972, 0.951, 0.928, 0.907, 0.885, 0.864, 0.843, 0.824, 0.806, 0.789],
+      "params": {"center_x": 0.45, "center_y": 0.55, "width": 5.5, "amplitude": 0.8}
+    },
+    {
+      "id": 1,
+      "context_frames": [],
+      "predicted_frames": [],
+      "ground_truth_frames": [],
+      "psnr_per_step": [33.5, 31.0, 28.9, 27.2, 25.8, 24.6, 23.5, 22.6, 21.8, 21.1],
+      "ssim_per_step": [0.968, 0.944, 0.920, 0.898, 0.876, 0.855, 0.835, 0.816, 0.798, 0.781],
+      "params": {"center_x": 0.3, "center_y": 0.7, "width": 4.0, "amplitude": 0.9}
+    },
+    {
+      "id": 2,
+      "context_frames": [],
+      "predicted_frames": [],
+      "ground_truth_frames": [],
+      "psnr_per_step": [35.1, 32.5, 30.2, 28.5, 27.0, 25.7, 24.5, 23.5, 22.7, 21.9],
+      "ssim_per_step": [0.978, 0.958, 0.935, 0.914, 0.892, 0.872, 0.852, 0.833, 0.815, 0.798],
+      "params": {"center_x": 0.6, "center_y": 0.4, "width": 6.5, "amplitude": 0.7}
+    }
+  ]
+}

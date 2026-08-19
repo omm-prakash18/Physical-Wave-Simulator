@@ -1,0 +1,28 @@
+# Core ML
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Image / Video processing
+Pillow>=9.0.0
+imageio>=2.28.0
+imageio[ffmpeg]
+
+# Metrics
+scikit-image>=0.20.0
+
+# Training logging
+tensorboard>=2.13.0
+
+# API
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# Visualization / Latent exploration
+umap-learn>=0.5.3
+
+# Utilities
+tqdm>=4.65.0
