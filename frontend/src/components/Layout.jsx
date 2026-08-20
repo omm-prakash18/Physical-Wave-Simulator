@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { path: '/', label: 'Overview', icon: '◎' },
@@ -11,7 +11,6 @@ const navItems = [
 ];
 
 export default function Layout({ children, isBackendOnline }) {
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState('Pages');
   const [filterText, setFilterText] = useState('');
   const [zoom, setZoom] = useState(100);

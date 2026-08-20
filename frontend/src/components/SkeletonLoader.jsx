@@ -7,7 +7,7 @@ export default function SkeletonLoader({ className = '', rows = 3 }) {
           className="skeleton"
           style={{
             height: i === 0 ? '24px' : '16px',
-            width: i === 0 ? '60%' : `${70 + Math.random() * 30}%`,
+            width: i === 0 ? '60%' : `${70 + ((i * 17) % 25)}%`,
           }}
         />
       ))}

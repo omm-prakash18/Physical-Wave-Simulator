@@ -78,6 +78,7 @@ def export_onnx(
 
     model.eval()
     wrapper = AutoregressiveWrapper(model).to(device)
+    wrapper.eval()
 
     # Dummy input for tracing: (B=1, T_in=10, C=1, H=64, W=64)
     dummy_input = torch.randn(1, DEFAULT_CONFIG.model.t_in, 1, 64, 64, device=device)

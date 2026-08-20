@@ -78,7 +78,6 @@ export default function AttentionViz({ isBackendOnline }) {
   }
 
   const weights = attentionData?.attention_weights || [];
-  const numRows = weights.length;
   const numCols = weights[0]?.length || 0;
 
   return (

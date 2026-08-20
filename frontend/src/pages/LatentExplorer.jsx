@@ -6,9 +6,8 @@ import { SkeletonChart } from '../components/SkeletonLoader';
  * Latent Space Explorer — 2D projection of latent tokens.
  * Shows precomputed UMAP/t-SNE embeddings colored by timestep.
  */
-export default function LatentExplorer({ isBackendOnline }) {
+export default function LatentExplorer() {
   const [data, setData] = useState([]);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
 
   useEffect(() => {
     // Generate synthetic UMAP-like data for demo
