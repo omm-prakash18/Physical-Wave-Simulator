@@ -48,21 +48,21 @@ export default function Playground({ isBackendOnline }) {
   return (
     <div className="animate-fade-in space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Live Prediction Playground</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Live Prediction Playground</h1>
+        <p className="text-sm text-text-secondary">
           Adjust the wave simulation parameters, generate a new sequence, and watch the model predict future frames in real time.
         </p>
       </div>
 
       {/* Controls */}
       <div className="glass-card p-6">
-        <h2 className="text-sm font-semibold text-white mb-4">Simulation Parameters</h2>
+        <h2 className="text-sm font-semibold text-text-primary mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Simulation Parameters</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {sliders.map(({ key, label, min, max, step }) => (
             <div key={key} className="space-y-2">
               <div className="flex justify-between">
-                <label className="text-xs font-mono text-slate-400">{label}</label>
-                <span className="text-xs font-mono text-electric">{params[key].toFixed(2)}</span>
+                <label className="text-xs text-text-secondary font-medium">{label}</label>
+                <span className="text-xs font-mono text-gold">{params[key].toFixed(2)}</span>
               </div>
               <input
                 type="range"
@@ -71,7 +71,7 @@ export default function Playground({ isBackendOnline }) {
                 step={step}
                 value={params[key]}
                 onChange={(e) => setParams({ ...params, [key]: parseFloat(e.target.value) })}
-                className="w-full h-1.5 rounded-full appearance-none bg-navy-700 cursor-pointer accent-electric"
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
               />
             </div>
           ))}
@@ -83,13 +83,14 @@ export default function Playground({ isBackendOnline }) {
             disabled={loading}
             className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all ${
               loading
-                ? 'bg-electric/20 text-electric/50 cursor-wait'
-                : 'bg-gradient-to-r from-electric to-purple text-white hover:shadow-lg hover:shadow-electric/25 hover:scale-[1.02] active:scale-[0.98]'
+                ? 'bg-gold/15 text-gold/50 cursor-wait'
+                : 'bg-gradient-to-r from-gold to-rose text-[#1a1a2e] hover:shadow-lg hover:shadow-gold/20 hover:scale-[1.02] active:scale-[0.98]'
             }`}
+            style={{ fontFamily: 'var(--font-heading)' }}
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-electric/50 border-t-electric rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
                 Generating...
               </span>
             ) : (
@@ -102,7 +103,6 @@ export default function Playground({ isBackendOnline }) {
       {/* Results */}
       {result && (
         <div className="space-y-6">
-          {/* Side-by-side players */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FramePlayer
               frames={result.ground_truth_frames}
@@ -118,12 +118,11 @@ export default function Playground({ isBackendOnline }) {
             />
           </div>
 
-          {/* Metrics sparklines */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="glass-card p-4">
               <Sparkline
                 data={result.psnr_per_step}
-                color="#10b981"
+                color="#7eb09b"
                 height={60}
                 label="PSNR per step (dB) — Higher is better"
               />
@@ -131,16 +130,15 @@ export default function Playground({ isBackendOnline }) {
             <div className="glass-card p-4">
               <Sparkline
                 data={result.ssim_per_step}
-                color="#f59e0b"
+                color="#d4a853"
                 height={60}
                 label="SSIM per step — Closer to 1.0 is better"
               />
             </div>
           </div>
 
-          {/* Parameter summary */}
           <div className="glass-card p-4">
-            <p className="text-xs font-mono text-slate-400">
+            <p className="text-xs font-mono text-text-secondary">
               Params: center=({result.params?.center_x?.toFixed(2)}, {result.params?.center_y?.toFixed(2)}),
               width={result.params?.width?.toFixed(1)},
               amp={result.params?.amplitude?.toFixed(2)}
@@ -154,7 +152,7 @@ export default function Playground({ isBackendOnline }) {
       )}
 
       {!result && !loading && (
-        <div className="text-center py-16 text-slate-400/60">
+        <div className="text-center py-16 text-text-secondary/50">
           <p className="text-4xl mb-4">🌊</p>
           <p className="text-sm">Adjust the parameters above and click "Generate & Predict" to see the model in action.</p>
         </div>

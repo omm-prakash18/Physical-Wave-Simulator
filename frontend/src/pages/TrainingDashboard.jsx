@@ -67,7 +67,7 @@ export default function TrainingDashboard({ isBackendOnline }) {
   if (loading) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold text-white">Training Dashboard</h1>
+        <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>Training Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SkeletonChart />
           <SkeletonChart />
@@ -90,9 +90,9 @@ export default function TrainingDashboard({ isBackendOnline }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Training Dashboard</h1>
-        <p className="text-sm text-slate-400">
-          Training progress, loss breakdowns, and evaluation metrics for the latest training run.
+        <h1 className="text-2xl font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Training Dashboard</h1>
+        <p className="text-sm text-text-secondary">
+          Training progress, loss breakdowns, and evaluation metrics for the latest run.
         </p>
       </div>
 
@@ -100,13 +100,13 @@ export default function TrainingDashboard({ isBackendOnline }) {
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Mean PSNR', value: `${metrics.psnr_mean?.toFixed(1)} dB`, color: 'text-emerald' },
-            { label: 'Mean SSIM', value: metrics.ssim_mean?.toFixed(4), color: 'text-amber' },
-            { label: 'Total Params', value: metrics.training_config?.params?.total?.toLocaleString() || '~10M', color: 'text-electric' },
-            { label: 'Epochs', value: metrics.training_config?.train?.epochs || 100, color: 'text-purple' },
+            { label: 'Mean PSNR', value: `${metrics.psnr_mean?.toFixed(1)} dB`, color: 'text-sage' },
+            { label: 'Mean SSIM', value: metrics.ssim_mean?.toFixed(4), color: 'text-gold' },
+            { label: 'Total Params', value: metrics.training_config?.params?.total?.toLocaleString() || '~13M', color: 'text-lavender' },
+            { label: 'Epochs', value: metrics.training_config?.train?.epochs || 100, color: 'text-rose' },
           ].map(({ label, value, color }) => (
             <div key={label} className="glass-card p-4 text-center">
-              <p className="text-xs font-mono text-slate-400 mb-1">{label}</p>
+              <p className="text-xs text-text-secondary mb-1" style={{ fontFamily: 'var(--font-heading)', fontWeight: 500 }}>{label}</p>
               <p className={`text-xl font-bold font-mono ${color}`}>{value}</p>
             </div>
           ))}
@@ -118,9 +118,9 @@ export default function TrainingDashboard({ isBackendOnline }) {
         <MetricChart
           data={lossData}
           lines={[
-            { key: 'total', color: '#3b82f6', label: 'Total' },
-            { key: 'recon', color: '#10b981', label: 'Recon' },
-            { key: 'latent', color: '#f59e0b', label: 'Latent' },
+            { key: 'total', color: '#d4a853', label: 'Total' },
+            { key: 'recon', color: '#7eb09b', label: 'Recon' },
+            { key: 'latent', color: '#c97b7b', label: 'Latent' },
           ]}
           xKey="epoch"
           xLabel="Epoch"
@@ -132,8 +132,8 @@ export default function TrainingDashboard({ isBackendOnline }) {
         <MetricChart
           data={lossData}
           lines={[
-            { key: 'perceptual', color: '#a855f7', label: 'Perceptual' },
-            { key: 'temporal', color: '#f43f5e', label: 'Temporal' },
+            { key: 'perceptual', color: '#9b8ec4', label: 'Perceptual' },
+            { key: 'temporal', color: '#c97b7b', label: 'Temporal' },
           ]}
           xKey="epoch"
           xLabel="Epoch"
@@ -147,7 +147,7 @@ export default function TrainingDashboard({ isBackendOnline }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MetricChart
           data={psnrStepData}
-          lines={[{ key: 'psnr', color: '#10b981', label: 'PSNR' }]}
+          lines={[{ key: 'psnr', color: '#7eb09b', label: 'PSNR' }]}
           xKey="step"
           xLabel="Prediction Step"
           yLabel="PSNR (dB)"
@@ -157,7 +157,7 @@ export default function TrainingDashboard({ isBackendOnline }) {
 
         <MetricChart
           data={ssimStepData}
-          lines={[{ key: 'ssim', color: '#f59e0b', label: 'SSIM' }]}
+          lines={[{ key: 'ssim', color: '#d4a853', label: 'SSIM' }]}
           xKey="step"
           xLabel="Prediction Step"
           yLabel="SSIM"
@@ -169,7 +169,7 @@ export default function TrainingDashboard({ isBackendOnline }) {
       {/* Training config */}
       {metrics?.training_config && (
         <div className="glass-card p-6">
-          <h3 className="text-sm font-semibold text-white mb-3">Training Configuration</h3>
+          <h3 className="text-sm font-semibold text-text-primary mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Training Configuration</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 text-xs font-mono">
             {Object.entries({
               'Learning Rate': metrics.training_config.train?.lr,
@@ -182,8 +182,8 @@ export default function TrainingDashboard({ isBackendOnline }) {
               'T_out': metrics.training_config.model?.t_out,
             }).map(([k, v]) => (
               <div key={k}>
-                <span className="text-slate-400">{k}: </span>
-                <span className="text-white">{v}</span>
+                <span className="text-text-secondary">{k}: </span>
+                <span className="text-text-primary">{v}</span>
               </div>
             ))}
           </div>

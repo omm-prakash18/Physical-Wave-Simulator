@@ -43,24 +43,24 @@ export default function MetricChart({
           <YAxis
             stroke="#64748b"
             fontSize={11}
-            fontFamily="'JetBrains Mono', monospace"
-            label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 } : undefined}
+            fontFamily="'Fira Code', monospace"
+            label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft', fill: '#b8a99a', fontSize: 11 } : undefined}
           />
           <Tooltip
             contentStyle={{
-              background: 'rgba(15, 15, 20, 0.65)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '8px',
+              background: 'rgba(26, 26, 46, 0.75)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(212, 168, 83, 0.12)',
+              borderRadius: '10px',
               fontSize: '12px',
-              fontFamily: "'JetBrains Mono', monospace",
-              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+              fontFamily: "'Fira Code', monospace",
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)',
             }}
-            labelStyle={{ color: '#94a3b8' }}
+            labelStyle={{ color: '#b8a99a' }}
           />
           {lines.length > 1 && (
             <Legend
-              wrapperStyle={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace" }}
+              wrapperStyle={{ fontSize: '11px', fontFamily: "'Fira Code', monospace" }}
             />
           )}
           {lines.map(({ key, color, label }) => (

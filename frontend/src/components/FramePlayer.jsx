@@ -24,19 +24,21 @@ export default function FramePlayer({
   const play = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
-      setInternalFrame((prev) => {
-        const next = (prev + 1) % frames.length;
-        if (onFrameChange) onFrameChange(next);
-        return next;
-      });
+      setInternalFrame((prev) => (prev + 1) % frames.length);
     }, 1000 / fps);
     setIsPlaying(true);
-  }, [frames.length, fps, onFrameChange]);
+  }, [frames.length, fps]);
 
   const pause = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsPlaying(false);
   };
+
+  useEffect(() => {
+    if (onFrameChange) {
+      onFrameChange(internalFrame);
+    }
+  }, [internalFrame, onFrameChange]);
 
   useEffect(() => {
     if (frames.length > 0 && externalFrame === null) {
@@ -59,8 +61,8 @@ export default function FramePlayer({
     <div className={`glass-card p-4 ${className}`}>
       {/* Label */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">{label}</span>
-        <span className="text-xs font-mono text-electric">
+        <span className="text-xs font-mono text-text-secondary uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-mono text-gold">
           {currentFrame + 1}/{frames.length}
         </span>
       </div>
@@ -70,7 +72,7 @@ export default function FramePlayer({
         <img
           src={`data:image/png;base64,${frames[currentFrame]}`}
           alt={`Frame ${currentFrame + 1}`}
-          className="frame-display rounded-lg border border-white/5"
+          className="frame-display rounded-lg border border-gold/10"
           style={{ width: size, height: size }}
         />
       </div>
@@ -90,14 +92,14 @@ export default function FramePlayer({
               if (onFrameChange) onFrameChange(val);
               pause();
             }}
-            className="w-full h-1 rounded-full appearance-none bg-navy-700 cursor-pointer accent-electric"
+            className="w-full h-1 rounded-full appearance-none bg-gold/10 cursor-pointer"
           />
 
           {/* Play/Pause */}
           <div className="flex justify-center">
             <button
               onClick={() => (isPlaying ? pause() : play())}
-              className="px-3 py-1 rounded-md text-xs font-medium bg-electric/10 text-electric hover:bg-electric/20 transition-all"
+              className="px-3 py-1 rounded-md text-xs font-medium bg-gold/15 text-gold hover:bg-gold/25 transition-all"
             >
               {isPlaying ? '⏸ Pause' : '▶ Play'}
             </button>

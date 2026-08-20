@@ -54,24 +54,24 @@ export default function AttentionViz({ isBackendOnline }) {
   }, [isBackendOnline, selectedLayer]);
 
   const getHeatColor = (value) => {
-    // Dark blue → cyan → yellow → red
+    // Warm palette: deep navy → gold → cream
     const v = Math.min(Math.max(value, 0), 1);
     if (v < 0.33) {
       const t = v / 0.33;
-      return `rgb(${Math.round(10 + t * 50)}, ${Math.round(15 + t * 100)}, ${Math.round(30 + t * 200)})`;
+      return `rgb(${Math.round(26 + t * 40)}, ${Math.round(26 + t * 50)}, ${Math.round(46 + t * 60)})`;
     } else if (v < 0.66) {
       const t = (v - 0.33) / 0.33;
-      return `rgb(${Math.round(60 + t * 195)}, ${Math.round(115 + t * 130)}, ${Math.round(230 - t * 180)})`;
+      return `rgb(${Math.round(66 + t * 146)}, ${Math.round(76 + t * 92)}, ${Math.round(106 - t * 23)})`;
     } else {
       const t = (v - 0.66) / 0.34;
-      return `rgb(${Math.round(255)}, ${Math.round(245 - t * 145)}, ${Math.round(50 - t * 50)})`;
+      return `rgb(${Math.round(212 + t * 38)}, ${Math.round(168 + t * 75)}, ${Math.round(83 + t * 100)})`;
     }
   };
 
   if (loading) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold text-white">Attention Visualization</h1>
+        <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>Attention Visualization</h1>
         <SkeletonCard />
       </div>
     );
@@ -84,30 +84,30 @@ export default function AttentionViz({ isBackendOnline }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Attention Visualization</h1>
-        <p className="text-sm text-slate-400">
-          Heatmap of the Transformer's cross-attention weights (context frame → predicted frame) averaged over all heads.
-          Rows represent the predicted target frames; columns represent the context input frames.
+        <h1 className="text-2xl font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Attention Visualization</h1>
+        <p className="text-sm text-text-secondary">
+          Heatmap of the Transformer's cross-attention weights (context → predicted) averaged over all heads.
+          Rows = predicted frames; columns = context input frames.
         </p>
       </div>
 
       {/* Layer selector */}
       <div className="glass-card p-4 flex items-center gap-4">
-        <span className="text-xs font-mono text-slate-400">Layer:</span>
+        <span className="text-xs text-text-secondary">Layer:</span>
         {[0, 1, 2, 3, 4, 5].map((l) => (
           <button
             key={l}
             onClick={() => setSelectedLayer(l)}
             className={`px-3 py-1 rounded-md text-xs font-mono transition-all ${
               (selectedLayer === -1 && l === 5) || selectedLayer === l
-                ? 'bg-electric/20 text-electric'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-gold/15 text-gold'
+                : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
             }`}
           >
             Decoder L{l}
           </button>
         ))}
-        <span className="text-xs text-slate-400/60 ml-auto">
+        <span className="text-xs text-text-secondary/60 ml-auto">
           {attentionData?.num_heads || 8} heads (averaged)
         </span>
       </div>
@@ -120,7 +120,7 @@ export default function AttentionViz({ isBackendOnline }) {
             {Array.from({ length: numCols }).map((_, j) => (
               <div
                 key={j}
-                className="w-10 h-10 flex items-center justify-center text-[10px] font-mono text-electric/80"
+                className="w-10 h-10 flex items-center justify-center text-[10px] font-mono text-gold/80"
               >
                 ctx {j}
               </div>
@@ -131,7 +131,7 @@ export default function AttentionViz({ isBackendOnline }) {
           {weights.map((row, i) => (
             <div key={i} className="flex items-center">
               {/* Row label */}
-              <div className="w-16 text-right pr-3 text-[10px] font-mono text-amber/80">
+              <div className="w-16 text-right pr-3 text-[10px] font-mono text-rose/80">
                 pred {i}
               </div>
 
@@ -150,23 +150,23 @@ export default function AttentionViz({ isBackendOnline }) {
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-6">
-          <span className="text-xs font-mono text-slate-400">Low</span>
+          <span className="text-xs font-mono text-text-secondary">Low</span>
           <div className="h-3 w-48 rounded-full" style={{
-            background: 'linear-gradient(to right, rgb(10,15,30), rgb(60,115,230), rgb(255,245,50), rgb(255,100,0))',
+            background: 'linear-gradient(to right, rgb(26,26,46), rgb(126,126,126), rgb(212,168,83), rgb(250,243,224))',
           }} />
-          <span className="text-xs font-mono text-slate-400">High</span>
+          <span className="text-xs font-mono text-text-secondary">High</span>
         </div>
 
         <div className="flex gap-4 mt-4">
           <span className="text-xs font-mono">
-            <span className="inline-block w-2.5 h-2.5 rounded bg-electric/60 mr-1.5" /> Context frames (0–9)
+            <span className="inline-block w-2.5 h-2.5 rounded bg-gold/60 mr-1.5" /> Context frames (0–9)
           </span>
           <span className="text-xs font-mono">
-            <span className="inline-block w-2.5 h-2.5 rounded bg-amber/60 mr-1.5" /> Predicted frames (10–19)
+            <span className="inline-block w-2.5 h-2.5 rounded bg-rose/60 mr-1.5" /> Predicted frames (10–19)
           </span>
         </div>
 
-        <p className="text-xs text-slate-400/60 mt-4 italic">
+        <p className="text-xs text-text-secondary/50 mt-4 italic">
           In this Encoder-Decoder architecture, predicted frames cross-attend directly to the context input frames.
           Notice the diagonal alignment showing how future states correlate to spatial wave patterns from specific context time offsets.
         </p>

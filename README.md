@@ -1,201 +1,164 @@
-# Hybrid CNN-Transformer Latent Video Prediction Engine
+# 🌊 Hybrid CNN-Transformer Latent Video Prediction Studio
 
-A full-stack ML system that predicts future frames of a **2D wave equation** simulation by:
-1. **Encoding** frames into a latent space with a CNN
-2. **Forecasting** the latent sequence with a causal Transformer
-3. **Decoding** predicted latents back to pixel space
+A full-stack machine learning system that forecasts future frames of physical simulations (2D wave equation propagation) by:
+1. **Compressing** high-dimensional spatial frames into latent tokens using a 4-stage Residual CNN Encoder
+2. **Forecasting** future latent sequence trajectories with a 6-layer Encoder-Decoder Causal Transformer
+3. **Reconstructing** predicted latent vectors back to pixel space using a 4-stage Residual CNN Decoder
 
-**Dataset**: 2D Wave Equation (Gaussian pulse propagation with reflecting boundaries)
-**Configurable via**: `config.py` — swap to `"balls"` or `"fluid"` datasets.
+Built with **PyTorch**, **FastAPI**, **React 18**, **Tailwind CSS**, and an elegant **warm professional studio theme** (Outfit + Source Sans 3 + Fira Code).
 
 ---
 
-## Architecture
+## 🎨 Visual Identity & UI/UX Design
+
+The application features a warm, production-grade professional aesthetic:
+- **Color Palette**: Deep warm navy canvas (`#1a1a2e`), cream-tinted glass panels, muted gold (`#d4a853`) and soft rose (`#c97b7b`) accents, sage green (`#7eb09b`) success states.
+- **Typography**:
+  - Headings: **Outfit** (clean geometric display sans)
+  - Body: **Source Sans 3** (humanist sans-serif)
+  - Monospace & Metrics: **Fira Code** (ligature-enabled monospace)
+- **Micro-Interactions**: Ambient glowing backdrop fields, custom range scrubbers, synchronized frame players, and interactive UMAP/Attention heatmaps.
+
+---
+
+## 🏛️ Architecture Overview
 
 ```
 Input Frames (B, T_in, 1, 64, 64)
          │
     ┌────┴────┐
-    │   CNN   │  4-stage Conv-BN-SiLU, stride 2
-    │ Encoder │  64→32→16→8→4, GAP, Linear
+    │ Residual│  4-stage Conv2d + ResNet shortcuts + Dropout2d
+    │   CNN   │  64→32→16→8→4, Adaptive Pooling, Linear
+    │ Encoder │  ~455K parameters
     └────┬────┘
          │
   Latent Tokens (B, T_in, 256)
          │
     ┌────┴─────────┐
-    │    Causal     │  6 layers, 8 heads, d=256
-    │  Transformer  │  Learned query tokens
+    │  Encoder-    │  6 Encoder + 6 Decoder layers, 8 Attention Heads
+    │  Decoder     │  Learned query tokens for T_out prediction horizon
+    │ Transformer  │  Pre-norm LayerNorm, GELU Feed-Forward Networks
+    │              │  ~11.1M parameters
     └────┬─────────┘
          │
   Predicted Latents (B, T_out, 256)
          │
     ┌────┴────┐
-    │   CNN   │  ConvTranspose ×4, Tanh
-    │ Decoder │
+    │ Residual│  4-stage ConvTranspose2d + ResNet shortcuts
+    │   CNN   │  Linear projection → 4→8→16→32→64, Conv + Tanh
+    │ Decoder │  ~1.75M parameters
     └────┬────┘
          │
   Predicted Frames (B, T_out, 1, 64, 64)
 ```
 
-**Parameters**: ~8.5M total (Encoder ~178K, Transformer ~8.1M, Decoder ~188K)
+**Total Parameters**: **~13.3M**
 
 ---
 
-## Quick Start
+## ⚡ Key Highlights & Optimizations
 
-### Prerequisites
+- **Residual Connections**: 1×1 convolutional shortcut projections in encoder and decoder blocks maintain spatial fidelity and prevent vanishing gradients.
+- **Normalized Data Pipeline**: Dynamic frame scaling to `[-1, 1]` aligned with the decoder's Tanh activation layer.
+- **Zero-Initialized Transformer Projection**: Output projection bias initialized to zero to stabilize initial training steps.
+- **Multi-Component Loss Function**:
+  - $\mathcal{L}_{\text{recon}}$: L1 pixel reconstruction loss
+  - $\mathcal{L}_{\text{latent}}$: Latent space MSE
+  - $\mathcal{L}_{\text{perceptual}}$: Feature-space L1 using frozen encoder stages
+  - $\mathcal{L}_{\text{temporal}}$: Frame-to-frame motion consistency
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
 - Python 3.10+
 - Node.js 18+
 - NVIDIA GPU with CUDA (recommended)
 
-### 1. Install dependencies
+### 2. Environment Setup
 
 ```bash
-# Python (install CUDA PyTorch first if needed)
+# Clone the repository
+git clone https://github.com/omm-prakash18/Physical-Wave-Simulator.git
+cd Physical-Wave-Simulator
+
+# Install Python dependencies (CUDA 12.6 PyTorch example)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 pip install -r requirements.txt
 
-# Frontend
-cd frontend && npm install
+# Install Frontend dependencies
+cd frontend
+npm install
+cd ..
 ```
 
-### 2. Generate training data
+### 3. Generate Simulation Data
 
 ```bash
 python -m data.generate_data --num_sequences 10000 --output_dir data/wave_64
 ```
 
-This generates 10,000 wave equation sequences (20 frames each, 64×64) split into train/val/test.
-
-### 3. Train the model
+### 4. Train the Model
 
 ```bash
 python -m training.train
 ```
 
-Training logs are saved to `runs/` (TensorBoard) and checkpoints to `checkpoints/`.
-
-Monitor training:
+Monitor training with TensorBoard:
 ```bash
 tensorboard --logdir runs
 ```
 
-**Expected training time**: ~2–4 hours on RTX 3050 (6GB).
-
-### 4. Evaluate
+### 5. Launch Full Stack
 
 ```bash
-python -m training.evaluate
+# Terminal 1: FastAPI Backend Server
+python -u api/main.py
+
+# Terminal 2: React Vite Dev Server
+cd frontend
+npm run dev
 ```
 
-Produces PSNR/SSIM curves and sample GIFs in `eval_output/`.
-
-### 5. Run the full stack
-
-```bash
-# Terminal 1: API server
-python -m api.main
-
-# Terminal 2: Frontend dev server
-cd frontend && npm run dev
-```
-
-Open http://localhost:5173 to access the frontend.
+Open **http://localhost:5173** to view the application.
 
 ---
 
-## Loss Function
-
-```
-L_total = L_recon + L_latent + 0.1 × L_perceptual + 0.5 × L_temporal
-```
-
-| Component | Description |
-|-----------|-------------|
-| `L_recon` | L1 pixel loss between predicted and GT frames |
-| `L_latent` | MSE in latent space (primary Transformer signal) |
-| `L_perceptual` | Feature-space L1 using frozen encoder — prevents blurring |
-| `L_temporal` | Motion consistency — penalizes flicker between frames |
-
-All components are logged separately to TensorBoard.
-
----
-
-## Training Details
-
-- **Optimizer**: AdamW, lr=3e-4, cosine decay + 500-step linear warmup
-- **Mixed precision**: FP16 with gradient scaling
-- **Batch size**: 16 with gradient accumulation of 2 (effective 32)
-- **Scheduled sampling**: Teacher forcing ratio decays 1.0 → 0.0 over training
-- **Joint training**: Encoder, Transformer, and Decoder trained together (not pretrained separately)
-
----
-
-## API Endpoints
+## 🌐 API Reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Server health + model status |
-| `/api/predict` | POST | Predict future frames from context |
-| `/api/generate` | POST | Generate fresh simulation + predict |
-| `/api/samples` | GET | Pre-generated demo sequences |
-| `/api/metrics` | GET | Training metrics (PSNR/SSIM, loss) |
-| `/api/attention` | GET | Transformer attention weights |
+| `/health` | GET | Server status, GPU device, and model parameter count |
+| `/api/predict` | POST | Forecast future frames from input context sequence |
+| `/api/generate` | POST | Generate custom simulation and model prediction |
+| `/api/samples` | GET | Pre-generated evaluation sequences |
+| `/api/metrics` | GET | Training metrics, loss components, and PSNR curves |
+| `/api/attention` | GET | Multi-head cross-attention weight maps |
 
 ---
 
-## Frontend Pages
+## 🖥️ Studio Pages
 
-1. **Overview** — Hero, live demo, key stats
-2. **Playground** — Interactive parameter controls + live prediction
-3. **Latent Explorer** — UMAP projection of latent tokens
-4. **Attention Viz** — Transformer attention heatmap
-5. **Training Dashboard** — Loss curves, PSNR/SSIM charts
-6. **Model Card** — Architecture, parameters, config
-
-The frontend gracefully degrades to demo mode when the backend is offline.
+1. **Overview**: Key metrics (PSNR, SSIM, parameter count), live context vs prediction comparison, interactive per-step PSNR bar chart.
+2. **Playground**: Real-time simulation parameter sliders (Pulse X/Y, Width, Amplitude) with instant model inference.
+3. **Latent Space**: 2D UMAP projection of frame tokens colored along temporal trajectories (gold → rose).
+4. **Attention Viz**: Layer-by-layer cross-attention heatmaps mapping context frames to predicted timesteps.
+5. **Training Dashboard**: Loss component breakdowns ($\mathcal{L}_{\text{recon}}$, $\mathcal{L}_{\text{latent}}$, $\mathcal{L}_{\text{perceptual}}$, $\mathcal{L}_{\text{temporal}}$) and rollout quality degradation plots.
+6. **Model Card**: Full technical specification, loss formulas, dataset specs, and tech stack details.
 
 ---
 
-## Project Structure
+## 🛠️ Technology Stack
 
-```
-cnn/
-├── config.py                   # All hyperparameters
-├── requirements.txt
-├── data/
-│   ├── generator.py            # Wave equation simulator
-│   ├── dataset.py              # PyTorch Dataset
-│   └── generate_data.py        # CLI data generation
-├── model/
-│   ├── encoder.py              # CNN Encoder
-│   ├── decoder.py              # CNN Decoder
-│   ├── transformer.py          # Causal Transformer
-│   ├── full_model.py           # Composed model
-│   └── losses.py               # Loss components
-├── training/
-│   ├── train.py                # Training loop
-│   ├── evaluate.py             # Evaluation + GIFs
-│   └── scheduler.py            # LR + teacher forcing
-├── api/
-│   ├── main.py                 # FastAPI app
-│   ├── routes.py               # Endpoints
-│   ├── schemas.py              # Pydantic models
-│   └── demo_data.py            # Demo sequence generation
-├── frontend/                   # React + Vite + Tailwind
-│   └── src/
-│       ├── pages/              # 6 page components
-│       ├── components/         # Shared UI components
-│       └── api/                # Backend client
-├── checkpoints/                # Model saves
-└── runs/                       # TensorBoard logs
-```
+- **Deep Learning**: PyTorch, TorchVision, NumPy, SciPy
+- **Backend API**: FastAPI, Uvicorn, Pydantic
+- **Frontend App**: React 18, Vite, Tailwind CSS, Recharts
+- **Design Tokens**: Outfit, Source Sans 3, Fira Code
+- **Logging & Viz**: TensorBoard, PIL, Matplotlib
 
 ---
 
-## Evaluation Metrics
+## 📄 License
 
-- **PSNR / SSIM** per rollout step (expect degradation — this is standard)
-- **Latent MSE** as primary training health metric
-- **Energy conservation error** (physics validation)
-- Qualitative side-by-side GIFs
+MIT License — free for open-source research and educational development.

@@ -37,19 +37,19 @@ export default function LatentExplorer({ isBackendOnline }) {
     setData(points);
   }, []);
 
-  // Color gradient: blue (t=0) → red (t=19)
+  // Color gradient: gold (t=0) → rose (t=19)
   const getColor = (timestep) => {
     const t = timestep / 19;
-    const r = Math.round(59 + t * (244 - 59));
-    const g = Math.round(130 - t * 67);
-    const b = Math.round(246 - t * 152);
+    const r = Math.round(212 - t * 11);
+    const g = Math.round(168 - t * 45);
+    const b = Math.round(83 + t * 40);
     return `rgb(${r}, ${g}, ${b})`;
   };
 
   if (data.length === 0) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold text-white">Latent Space Explorer</h1>
+        <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>Latent Space Explorer</h1>
         <SkeletonChart />
       </div>
     );
@@ -58,33 +58,33 @@ export default function LatentExplorer({ isBackendOnline }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Latent Space Explorer</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Latent Space Explorer</h1>
+        <p className="text-sm text-text-secondary">
           UMAP projection of latent tokens across sequences. Each point represents one frame's
-          latent vector. Color encodes timestep: <span className="text-electric">blue = early</span> →{' '}
-          <span className="text-rose">red = late</span>.
+          latent vector. Color encodes timestep: <span className="text-gold">gold = early</span> →{' '}
+          <span className="text-rose">rose = late</span>.
         </p>
       </div>
 
       <div className="glass-card p-6">
         <ResponsiveContainer width="100%" height={500}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(59, 130, 246, 0.08)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(212, 168, 83, 0.06)" />
             <XAxis
               type="number"
               dataKey="x"
-              stroke="#64748b"
+              stroke="#b8a99a"
               fontSize={11}
-              fontFamily="'JetBrains Mono', monospace"
-              label={{ value: 'UMAP-1', position: 'insideBottom', offset: -10, fill: '#64748b' }}
+              fontFamily="'Fira Code', monospace"
+              label={{ value: 'UMAP-1', position: 'insideBottom', offset: -10, fill: '#b8a99a' }}
             />
             <YAxis
               type="number"
               dataKey="y"
-              stroke="#64748b"
+              stroke="#b8a99a"
               fontSize={11}
-              fontFamily="'JetBrains Mono', monospace"
-              label={{ value: 'UMAP-2', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+              fontFamily="'Fira Code', monospace"
+              label={{ value: 'UMAP-2', angle: -90, position: 'insideLeft', fill: '#b8a99a' }}
             />
             <Tooltip
               cursor={false}
@@ -93,8 +93,8 @@ export default function LatentExplorer({ isBackendOnline }) {
                 const d = payload[0].payload;
                 return (
                   <div className="glass-card p-3 text-xs font-mono">
-                    <p className="text-white">{d.label}</p>
-                    <p className="text-slate-400">
+                    <p className="text-text-primary">{d.label}</p>
+                    <p className="text-text-secondary">
                       ({d.x.toFixed(2)}, {d.y.toFixed(2)})
                     </p>
                   </div>
@@ -113,7 +113,7 @@ export default function LatentExplorer({ isBackendOnline }) {
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
-        <p className="text-xs text-slate-400/60 mt-3 italic">
+        <p className="text-xs text-text-secondary/50 mt-3 italic">
           Temporal trajectories form smooth arcs in latent space, indicating the model has learned
           a structured representation of wave dynamics. Nearby points represent similar physical states.
         </p>
@@ -121,13 +121,13 @@ export default function LatentExplorer({ isBackendOnline }) {
 
       {/* Color legend */}
       <div className="glass-card p-4">
-        <p className="text-xs font-mono text-slate-400 mb-2">Timestep Color Scale</p>
+        <p className="text-xs text-text-secondary mb-2" style={{ fontFamily: 'var(--font-heading)', fontWeight: 500 }}>Timestep Color Scale</p>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-slate-400">t=0</span>
+          <span className="text-xs font-mono text-text-secondary">t=0</span>
           <div className="flex-1 h-3 rounded-full" style={{
-            background: 'linear-gradient(to right, #3b82f6, #a855f7, #f43f5e)',
+            background: 'linear-gradient(to right, #d4a853, #9b8ec4, #c97b7b)',
           }} />
-          <span className="text-xs font-mono text-slate-400">t=19</span>
+          <span className="text-xs font-mono text-text-secondary">t=19</span>
         </div>
       </div>
     </div>

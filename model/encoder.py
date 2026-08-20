@@ -3,25 +3,36 @@ CNN Encoder: Frame → Latent Token.
 
 4-stage convolutional downsampler that compresses a single frame
 (C, 64, 64) into a latent vector of dimension d_model.
+Includes residual connections with 1×1 shortcut projections for
+stable gradient flow through deeper networks.
 """
 
 import torch
 import torch.nn as nn
 
 
-class ConvBlock(nn.Module):
-    """Conv2d → BatchNorm → SiLU block with stride-2 downsampling."""
+class ResConvBlock(nn.Module):
+    """Conv2d → BatchNorm → SiLU with residual shortcut and optional dropout."""
 
-    def __init__(self, in_channels: int, out_channels: int, stride: int = 2):
+    def __init__(self, in_channels: int, out_channels: int, stride: int = 2, dropout: float = 0.05):
         super().__init__()
-        self.block = nn.Sequential(
+        self.main = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.SiLU(inplace=True),
+            nn.Dropout2d(p=dropout),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
         )
+        # 1x1 shortcut projection to match dimensions
+        self.shortcut = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+            nn.BatchNorm2d(out_channels),
+        )
+        self.act = nn.SiLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.block(x)
+        return self.act(self.main(x) + self.shortcut(x))
 
 
 class CNNEncoder(nn.Module):
@@ -45,14 +56,15 @@ class CNNEncoder(nn.Module):
         in_channels: int = 1,
         channel_progression: tuple[int, ...] = (32, 64, 128, 256),
         d_model: int = 256,
+        dropout: float = 0.05,
     ):
         super().__init__()
 
         channels = [in_channels] + list(channel_progression)
 
-        # Build convolutional stages
+        # Build residual convolutional stages
         self.stages = nn.Sequential(*[
-            ConvBlock(channels[i], channels[i + 1], stride=2)
+            ResConvBlock(channels[i], channels[i + 1], stride=2, dropout=dropout)
             for i in range(len(channel_progression))
         ])
 

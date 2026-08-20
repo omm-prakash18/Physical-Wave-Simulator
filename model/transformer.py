@@ -162,6 +162,9 @@ class CausalLatentTransformer(nn.Module):
 
         self.output_norm = nn.LayerNorm(d_model)
         self.output_proj = nn.Linear(d_model, d_model)
+        # Zero-init bias for stable early training
+        nn.init.zeros_(self.output_proj.bias)
+        nn.init.xavier_uniform_(self.output_proj.weight, gain=0.1)
 
     def _build_causal_mask(self, length: int, device: torch.device) -> torch.Tensor:
         """Causal self-attention mask for the decoder queries."""
