@@ -48,11 +48,13 @@ export default function MetricChart({
           />
           <Tooltip
             contentStyle={{
-              background: 'rgba(10, 15, 30, 0.95)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
+              background: 'rgba(15, 15, 20, 0.65)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '8px',
               fontSize: '12px',
               fontFamily: "'JetBrains Mono', monospace",
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
             }}
             labelStyle={{ color: '#94a3b8' }}
           />

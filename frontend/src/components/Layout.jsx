@@ -21,9 +21,16 @@ export default function Layout({ children, isBackendOnline }) {
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas-bg font-sans">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[#070709] font-sans">
+      {/* ─── GLOWING BACKGROUND GRADIENTS ─────────────────────────── */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[550px] h-[550px] rounded-full bg-gradient-to-br from-orange-600/10 to-transparent blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[10%] right-[-10%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-purple-600/12 to-transparent blur-[140px] animate-pulse" style={{ animationDuration: '12s' }} />
+        <div className="absolute top-[35%] left-[45%] w-[450px] h-[450px] rounded-full bg-gradient-to-bl from-blue-600/10 to-transparent blur-[110px] animate-pulse" style={{ animationDuration: '10s' }} />
+      </div>
+
       {/* ─── LEFT SIDEBAR ─────────────────────────────────── */}
-      <aside className="w-60 border-r border-border-color bg-panel-bg flex flex-col justify-between shrink-0">
+      <aside className="w-60 border-r border-border-color bg-panel-bg flex flex-col justify-between shrink-0 glass-panel-left z-10">
         <div className="p-4 space-y-4">
           {/* macOS controls */}
           <div className="flex items-center justify-between">
@@ -36,14 +43,14 @@ export default function Layout({ children, isBackendOnline }) {
           </div>
 
           {/* Toggle Tab Switcher */}
-          <div className="bg-[#1c1c1f] p-0.5 rounded-lg flex border border-border-color">
+          <div className="bg-white/5 p-0.5 rounded-lg flex border border-white/5">
             {['Pages', 'Components'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 text-center py-1.5 rounded-md text-xs font-semibold transition-all ${
                   activeTab === tab
-                    ? 'bg-[#27272a] text-white shadow-sm'
+                    ? 'bg-white/10 text-white shadow-sm border border-white/10'
                     : 'text-text-secondary hover:text-white'
                 }`}
               >
@@ -79,7 +86,7 @@ export default function Layout({ children, isBackendOnline }) {
         </div>
 
         {/* Guest profile footer info */}
-        <div className="p-4 border-t border-border-color bg-[#0e0e10] space-y-2">
+        <div className="p-4 border-t border-border-color/50 bg-white/2 space-y-2">
           <p className="text-[11px] text-text-secondary">
             You're running as a <span className="text-accent-orange font-semibold">guest</span>.
           </p>
@@ -96,12 +103,12 @@ export default function Layout({ children, isBackendOnline }) {
       </aside>
 
       {/* ─── MAIN WORKSPACE CONTENT ─────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 z-10">
         {/* Top Header Workspace Bar */}
-        <header className="h-12 border-b border-border-color bg-panel-bg px-6 flex items-center justify-between shrink-0">
+        <header className="h-12 border-b border-border-color bg-panel-bg px-6 flex items-center justify-between shrink-0 glass-panel-header">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-text-secondary uppercase tracking-wider">Workspace:</span>
-            <span className="text-xs font-semibold text-white bg-[#1c1c1f] px-2.5 py-1 rounded-md border border-border-color font-mono">
+            <span className="text-xs font-semibold text-white bg-white/5 px-2.5 py-1 rounded-md border border-white/5 font-mono">
               wave-latent-predictor-v1
             </span>
           </div>
@@ -132,7 +139,7 @@ export default function Layout({ children, isBackendOnline }) {
         </div>
 
         {/* Bottom Status Canvas Bar */}
-        <footer className="h-9 border-t border-border-color bg-[#0e0e10] px-4 flex items-center justify-between text-xs font-mono text-text-secondary shrink-0">
+        <footer className="h-9 border-t border-border-color bg-panel-bg px-4 flex items-center justify-between text-xs font-mono text-text-secondary shrink-0 glass-panel-footer">
           <div className="flex items-center gap-2">
             <span className="text-emerald-500">✓</span>
             <span>deployed! wave.u8.ai</span>
@@ -149,7 +156,7 @@ export default function Layout({ children, isBackendOnline }) {
       </div>
 
       {/* ─── RIGHT COPILOT/ASSISTANT SIDEBAR ───────────────── */}
-      <aside className="w-72 border-l border-border-color bg-panel-bg flex flex-col justify-between shrink-0 hidden lg:flex">
+      <aside className="w-72 border-l border-border-color bg-panel-bg flex flex-col justify-between shrink-0 hidden lg:flex glass-panel-right z-10">
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between pb-3 border-b border-border-color">
             <span className="text-xs font-semibold text-white font-mono">← Copilot Panel</span>
@@ -160,7 +167,7 @@ export default function Layout({ children, isBackendOnline }) {
 
           {/* Model cards explanation */}
           <div className="space-y-4 text-xs">
-            <div className="p-3 bg-[#1c1c1f] rounded-lg border border-border-color space-y-1">
+            <div className="p-3 bg-white/5 rounded-lg border border-white/5 space-y-1">
               <span className="text-[10px] font-mono text-text-secondary uppercase">Explorer Log</span>
               <p className="text-white leading-relaxed font-mono">
                 The Hybrid CNN-Transformer model predicts future physical simulation states directly in the compressed 256-dimensional latent space.
@@ -188,10 +195,10 @@ export default function Layout({ children, isBackendOnline }) {
               ].map((msg, i) => (
                 <div key={i} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white text-[11px] font-mono">{msg.sender}</span>
-                    <span className="text-[9px] text-text-secondary/70">{msg.time}</span>
+                     <span className="font-semibold text-white text-[11px] font-mono">{msg.sender}</span>
+                     <span className="text-[9px] text-text-secondary/70">{msg.time}</span>
                   </div>
-                  <p className="text-text-secondary leading-relaxed bg-[#1c1c1f]/40 p-2.5 rounded-md border border-white/3">
+                  <p className="text-text-secondary leading-relaxed bg-white/5 p-2.5 rounded-md border border-white/5 backdrop-blur-sm">
                     {msg.text}
                   </p>
                 </div>
@@ -201,7 +208,7 @@ export default function Layout({ children, isBackendOnline }) {
         </div>
 
         {/* Bottom helper action buttons */}
-        <div className="p-4 border-t border-border-color bg-[#0e0e10] flex items-center justify-between text-xs font-mono text-text-secondary/80">
+        <div className="p-4 border-t border-border-color/50 bg-white/2 flex items-center justify-between text-xs font-mono text-text-secondary/80">
           <span>Logs: TensorBoard</span>
           <div className="flex gap-2">
             <span className="cursor-help hover:text-white" title="View Keybinds">⌨</span>

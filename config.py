@@ -67,7 +67,7 @@ class TrainConfig:
     # Batch
     batch_size: int = 8
     grad_accumulation_steps: int = 4
-    num_workers: int = 2
+    num_workers: int = 0 if os.name == 'nt' else 2
 
     # Mixed precision
     use_amp: bool = True

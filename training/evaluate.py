@@ -41,12 +41,16 @@ def evaluate_sequence(
     Evaluate a single predicted sequence against ground truth.
 
     Args:
-        predicted_frames: (T, 1, H, W), values in [0, 1]
-        target_frames: (T, 1, H, W), values in [0, 1]
+        predicted_frames: (T, 1, H, W), values in [-1, 1]
+        target_frames: (T, 1, H, W), values in [-1, 1]
 
     Returns:
         dict with per-step PSNR, SSIM, and summary statistics.
     """
+    # Scale from [-1, 1] to [0, 1] for metrics calculation
+    predicted_frames = (predicted_frames + 1.0) / 2.0
+    target_frames = (target_frames + 1.0) / 2.0
+
     T = predicted_frames.shape[0]
 
     psnr_per_step = []

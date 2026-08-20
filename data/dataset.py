@@ -62,6 +62,10 @@ class WaveDataset(Dataset):
         frames = data["frames"]  # (T, C, H, W)
         params = data["params"].item() if "params" in data else {}
 
+        # Scale frames to [-1, 1] if they are currently in [0, 1]
+        if frames.min() >= 0.0 and frames.max() <= 1.0:
+            frames = frames * 2.0 - 1.0
+
         # Split into context and target
         assert frames.shape[0] >= self.t_in + self.t_out, (
             f"Sequence length {frames.shape[0]} < t_in({self.t_in}) + t_out({self.t_out})"

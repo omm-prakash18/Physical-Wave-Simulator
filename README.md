@@ -30,7 +30,7 @@ Input Frames (B, T_in, 1, 64, 64)
   Predicted Latents (B, T_out, 256)
          │
     ┌────┴────┐
-    │   CNN   │  ConvTranspose ×4, Sigmoid
+    │   CNN   │  ConvTranspose ×4, Tanh
     │ Decoder │
     └────┬────┘
          │
