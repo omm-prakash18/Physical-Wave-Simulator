@@ -66,6 +66,11 @@ Input Frames (B, T_in, 1, 64, 64)
   - $\mathcal{L}_{\text{latent}}$: Latent space MSE
   - $\mathcal{L}_{\text{perceptual}}$: Feature-space L1 using frozen encoder stages
   - $\mathcal{L}_{\text{temporal}}$: Frame-to-frame motion consistency
+- **Automated Testing Suite (`pytest`)**: 17 comprehensive unit & integration tests covering tensor shape invariants, loss function calculations, wave PDE simulation bounds, and FastAPI endpoint routes.
+- **MLOps & ONNX Export**: Graph compilation to ONNX format via `training/export_onnx.py` with ONNX Runtime backend serving & live latency benchmarking (`/api/benchmark`).
+- **Production Containerization**: Multi-stage `Dockerfile` (React build + FastAPI Python runtime) and single-command orchestration via `docker-compose.yml`.
+- **GitHub Actions CI/CD Pipeline**: Continuous integration workflow (`.github/workflows/ci.yml`) enforcing automated test suites and frontend production build checks.
+
 
 ---
 

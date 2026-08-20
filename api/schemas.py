@@ -88,3 +88,14 @@ class AttentionResponse(BaseModel):
     predicted_frames: list[str]
     layer: int
     num_heads: int
+
+
+class BenchmarkResponse(BaseModel):
+    """Response from /api/benchmark latency comparison."""
+    pytorch_avg_ms: float
+    pytorch_p95_ms: float
+    onnx_avg_ms: float
+    onnx_p95_ms: float
+    speedup: float
+    onnx_available: bool
+

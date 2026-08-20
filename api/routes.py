@@ -17,7 +17,9 @@ from api.schemas import (
     SamplesResponse, SampleSequence,
     MetricsResponse,
     AttentionResponse,
+    BenchmarkResponse,
 )
+
 from api.demo_data import (
     base64_to_frame, frames_to_base64_list, frame_to_base64,
     generate_demo_samples,
@@ -239,3 +241,67 @@ async def get_attention(sample_index: int = 0, layer: int = -1):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/benchmark", response_model=BenchmarkResponse)
+async def get_benchmark(num_runs: int = 10):
+    """Benchmark PyTorch vs ONNX Runtime inference latency."""
+    if _model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    import time
+    onnx_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "checkpoints", "model.onnx"
+    )
+    onnx_exists = os.path.exists(onnx_path)
+
+    # Dummy input (B=1, T_in=10, C=1, H=64, W=64)
+    dummy_input = torch.randn(1, 10, 1, 64, 64, device=_device)
+
+    # Benchmark PyTorch
+    pt_times = []
+    with torch.no_grad():
+        for _ in range(num_runs):
+            t0 = time.perf_counter()
+            _ = _model.predict_autoregressive(dummy_input)
+            if _device == "cuda":
+                torch.cuda.synchronize()
+            pt_times.append((time.perf_counter() - t0) * 1000.0)
+
+    pt_avg = float(np.mean(pt_times))
+    pt_p95 = float(np.percentile(pt_times, 95))
+
+    ort_avg = pt_avg
+    ort_p95 = pt_p95
+    speedup = 1.0
+
+    if onnx_exists:
+        try:
+            import onnxruntime as ort
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if _device == "cuda" else ["CPUExecutionProvider"]
+            session = ort.InferenceSession(onnx_path, providers=providers)
+            input_name = session.get_inputs()[0].name
+            ort_input = {input_name: dummy_input.cpu().numpy()}
+
+            ort_times = []
+            for _ in range(num_runs):
+                t0 = time.perf_counter()
+                _ = session.run(None, ort_input)
+                ort_times.append((time.perf_counter() - t0) * 1000.0)
+
+            ort_avg = float(np.mean(ort_times))
+            ort_p95 = float(np.percentile(ort_times, 95))
+            speedup = float(pt_avg / max(ort_avg, 1e-6))
+        except Exception:
+            onnx_exists = False
+
+    return BenchmarkResponse(
+        pytorch_avg_ms=round(pt_avg, 2),
+        pytorch_p95_ms=round(pt_p95, 2),
+        onnx_avg_ms=round(ort_avg, 2),
+        onnx_p95_ms=round(ort_p95, 2),
+        speedup=round(speedup, 2),
+        onnx_available=onnx_exists,
+    )
+

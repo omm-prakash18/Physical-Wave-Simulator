@@ -1,0 +1,25 @@
+# Ignore Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Ignore Node.js / frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.nx/
+frontend/.cache/
+
+# Ignore model checkpoints & TensorBoard runs (if heavy)
+# checkpoints/*.pt
+# runs/
+
+# OS files
+.DS_Store
+Thumbs.db

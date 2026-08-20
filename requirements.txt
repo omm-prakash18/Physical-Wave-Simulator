@@ -24,5 +24,12 @@ python-multipart>=0.0.6
 # Visualization / Latent exploration
 umap-learn>=0.5.3
 
+# Testing & MLOps Optimization
+pytest>=7.3.0
+httpx>=0.24.0
+onnx>=1.14.0
+onnxruntime>=1.15.0
+
 # Utilities
 tqdm>=4.65.0
+
