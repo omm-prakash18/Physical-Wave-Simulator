@@ -389,7 +389,7 @@ export default function ImageAnalysis({ isBackendOnline }) {
                     Spatial Frame → Learned Latent Token
                   </h4>
                   <p className="text-xs text-text-secondary leading-relaxed">
-                    The 4-stage ResConv CNN Encoder downsamples your input picture from <span className="text-gold font-mono font-semibold">64×64 pixels (4096 values)</span> into a compact <span className="text-rose font-mono font-semibold">256-dimensional latent token ($z_t$)</span>.
+                    The 4-stage ResConv CNN Encoder downsamples your input picture from <span className="text-gold font-mono font-semibold">64×64 pixels (4096 values)</span> into a compact <span className="text-rose font-mono font-semibold">256-dimensional latent token z<sub>t</sub></span>.
                   </p>
                   <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
                     <p>• Input Shape: (1, 64, 64)</p>
@@ -422,7 +422,7 @@ export default function ImageAnalysis({ isBackendOnline }) {
 
                 {/* 256-Dim Latent Barcode */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-text-primary">Learned Latent Vector $z_t$ (256-Dim)</p>
+                  <p className="text-xs font-semibold text-text-primary">Learned Latent Vector z<sub>t</sub> (256-Dim)</p>
                   <div className="h-24 flex items-center gap-[1px] overflow-hidden rounded-lg bg-black/50 p-2 border border-white/10">
                     {result.latent_vector.map((val, idx) => {
                       const normVal = Math.max(0, Math.min(1, (val - lMin) / (lMax - lMin)));
@@ -459,19 +459,19 @@ export default function ImageAnalysis({ isBackendOnline }) {
                     Multi-Head Causal Attention Over Latents
                   </h4>
                   <p className="text-xs text-text-secondary leading-relaxed">
-                    The 6-layer Causal Transformer receives context latent tokens $[z_1 \dots z_{10}]$ and auto-regressively predicts future latent tokens $[z_{11} \dots z_{20}]$ using masked multi-head causal attention.
+                    The 6-layer Causal Transformer receives context latent tokens <span className="font-mono text-gold">[z₁ ... z₁₀]</span> and auto-regressively predicts future latent tokens <span className="font-mono text-rose">[z₁₁ ... z₂₀]</span> using masked multi-head causal attention.
                   </p>
                   <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
                     <p>• Architecture: 6 Layers, 8 Attention Heads</p>
                     <p>• Causal Masking: Prevents future token leakage</p>
-                    <p>• Auto-regression: Token $z_{t+1}$ generated step by step</p>
+                    <p>• Auto-regression: Token z<sub>t+1</sub> generated step by step</p>
                   </div>
                 </div>
 
                 {/* Interactive Causal Attention Heatmap Matrix */}
                 <div className="bg-black/30 p-4 rounded-xl border border-white/6 space-y-3">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-text-primary">Causal Self-Attention Matrix ($10 \times 10$)</span>
+                    <span className="font-semibold text-text-primary">Causal Self-Attention Matrix (10 × 10)</span>
                     <span className="font-mono text-rose text-[10px]">Causal Mask Applied</span>
                   </div>
                   <div className="grid grid-cols-10 gap-1 bg-black/60 p-3 rounded-lg border border-white/10">
@@ -515,7 +515,7 @@ export default function ImageAnalysis({ isBackendOnline }) {
                     Latent Tokens → 2D Wave Sequence Rollout
                   </h4>
                   <p className="text-xs text-text-secondary leading-relaxed">
-                    Each predicted latent token $z_{t+k}$ is passed through the 4-stage ResConv CNN Decoder, decompressing back into a full 64×64 reconstructed 2D wave frame.
+                    Each predicted latent token z<sub>t+k</sub> is passed through the 4-stage ResConv CNN Decoder, decompressing back into a full 64×64 reconstructed 2D wave frame.
                   </p>
                   <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
                     <p>• Output Horizon: 10 Predicted Frames</p>

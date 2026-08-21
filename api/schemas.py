@@ -113,4 +113,20 @@ class UploadAnalysisResponse(BaseModel):
     spatial_vectors: list[dict]      # List of {x, y, dx, dy, magnitude, angle} gradient vectors
 
 
+class PredictUncertaintyRequest(BaseModel):
+    """Request for /api/predict_uncertainty."""
+    frames: list[str] = Field(..., description="List of base64-encoded grayscale context frame images.", min_length=1)
+    num_samples: int = Field(default=20, ge=2, le=50, description="Number of stochastic MC-Dropout forward passes.")
+
+
+class PredictUncertaintyResponse(BaseModel):
+    """Response from /api/predict_uncertainty."""
+    predicted_frames: list[str]      # Base64 mean forecast frames
+    uncertainty_maps: list[str]      # Base64 std deviation heatmaps per frame
+    per_frame_uncertainty: list[float] # Average std deviation per predicted step
+    mean_uncertainty: float           # Overall sequence epistemic uncertainty
+    num_samples: int                 # Number of stochastic samples run
+
+
+
 

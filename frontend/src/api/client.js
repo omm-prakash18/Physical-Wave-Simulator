@@ -64,5 +64,13 @@ export async function uploadAndAnalyzeImage(file) {
   return res.data;
 }
 
+export async function predictUncertainty(frames, numSamples = 20) {
+  const res = await api.post('/api/predict_uncertainty', {
+    frames,
+    num_samples: numSamples,
+  });
+  return res.data;
+}
+
 export default api;
 

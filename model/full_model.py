@@ -191,3 +191,49 @@ class LatentVideoPredictor(nn.Module):
             teacher_forcing_ratio=0.0,
             need_weights=need_weights,
         )
+
+    def predict_uncertainty(
+        self,
+        context_frames: torch.Tensor,
+        num_samples: int = 20,
+    ) -> dict:
+        """
+        Perform Monte Carlo Dropout (MC-Dropout) stochastic forward passes
+        to estimate epistemic uncertainty (mean and per-pixel standard deviation).
+
+        Args:
+            context_frames: (B, T_in, C, H, W)
+            num_samples: Number of stochastic forward passes (default: 20)
+
+        Returns:
+            dict containing:
+                'mean_predicted_frames': (B, T_out, C, H, W)
+                'std_predicted_frames': (B, T_out, C, H, W)
+                'sample_predictions': (N, B, T_out, C, H, W)
+        """
+        self.eval()
+        # Enable dropout layers for stochastic inference
+        for m in self.modules():
+            if isinstance(m, (nn.Dropout, nn.Dropout2d, nn.Dropout3d)):
+                m.train()
+
+        preds = []
+        with torch.no_grad():
+            for _ in range(num_samples):
+                out = self.forward(context_frames=context_frames, teacher_forcing_ratio=0.0)
+                preds.append(out["predicted_frames"])
+
+        # Reset model back to full eval mode
+        self.eval()
+
+        # Stack predictions along new sample dimension (N, B, T_out, C, H, W)
+        preds_stack = torch.stack(preds, dim=0)
+        mean_preds = preds_stack.mean(dim=0)
+        std_preds = preds_stack.std(dim=0)
+
+        return {
+            "mean_predicted_frames": mean_preds,
+            "std_predicted_frames": std_preds,
+            "sample_predictions": preds_stack,
+        }
+

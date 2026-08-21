@@ -5,6 +5,7 @@ FastAPI route handlers for the Latent Video Prediction API.
 import os
 import sys
 import json
+import base64
 import numpy as np
 import torch
 import io
@@ -21,6 +22,7 @@ from api.schemas import (
     AttentionResponse,
     BenchmarkResponse,
     UploadAnalysisResponse,
+    PredictUncertaintyRequest, PredictUncertaintyResponse,
 )
 
 from api.demo_data import (
@@ -423,5 +425,64 @@ async def upload_analyze(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
+
+
+@router.post("/predict_uncertainty", response_model=PredictUncertaintyResponse)
+async def predict_uncertainty(request: PredictUncertaintyRequest):
+    """
+    Perform Monte Carlo Dropout (MC-Dropout) stochastic predictions to estimate
+    mean forecast frames and per-pixel standard deviation epistemic uncertainty heatmaps.
+    """
+    if _model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    try:
+        # Decode base64 context frames
+        frames_np = [base64_to_frame(b64) for b64 in request.frames]
+        frames_arr = np.stack(frames_np, axis=0)  # (T_in, H, W)
+        frames_tensor = torch.from_numpy(frames_arr).unsqueeze(0).unsqueeze(2).to(_device)  # (1, T_in, 1, H, W)
+
+        # Run MC-Dropout stochastic forward passes
+        unc_res = _model.predict_uncertainty(frames_tensor, num_samples=request.num_samples)
+
+        mean_np = unc_res["mean_predicted_frames"].cpu().numpy()[0]  # (T_out, 1, H, W)
+        std_np = unc_res["std_predicted_frames"].cpu().numpy()[0]    # (T_out, 1, H, W)
+
+        # Convert mean frames to base64
+        b64_means = frames_to_base64_list(mean_np)
+
+        # Convert std maps to base64 heatmaps
+        b64_uncertainty = []
+        per_frame_unc = []
+        for t in range(std_np.shape[0]):
+            std_frame = std_np[t, 0]  # (H, W)
+            mean_unc = float(std_frame.mean())
+            per_frame_unc.append(round(mean_unc, 4))
+
+            # Scale std map to [0, 255] base64 PNG
+            s_min, s_max = float(std_frame.min()), float(std_frame.max())
+            if s_max - s_min > 1e-6:
+                scaled = ((std_frame - s_min) / (s_max - s_min) * 255.0).astype(np.uint8)
+            else:
+                scaled = np.zeros_like(std_frame, dtype=np.uint8)
+
+            img = Image.fromarray(scaled, mode="L")
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            b64_uncertainty.append(base64.b64encode(buf.getvalue()).decode("utf-8"))
+
+        overall_unc = float(np.mean(per_frame_unc))
+
+        return PredictUncertaintyResponse(
+            predicted_frames=b64_means,
+            uncertainty_maps=b64_uncertainty,
+            per_frame_uncertainty=per_frame_unc,
+            mean_uncertainty=round(overall_unc, 4),
+            num_samples=request.num_samples,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Uncertainty estimation failed: {str(e)}")
+
 
 

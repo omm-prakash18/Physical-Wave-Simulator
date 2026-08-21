@@ -120,6 +120,8 @@ def test_upload_analyze_endpoint(client):
 
     files = {"file": ("test_wave.png", buf, "image/png")}
     response = client.post("/api/upload-analyze", files=files)
+    if response.status_code != 200:
+        print("UPLOAD ERROR:", response.json())
     assert response.status_code == 200
     json_data = response.json()
     assert json_data["original_filename"] == "test_wave.png"
@@ -136,5 +138,31 @@ def test_upload_analyze_endpoint(client):
     assert "dx" in json_data["spatial_vectors"][0]
     assert "dy" in json_data["spatial_vectors"][0]
     assert "feature_map_frame" in json_data
+
+
+def test_predict_uncertainty_endpoint(client):
+    """Verify POST /api/predict_uncertainty executes MC-Dropout forward passes and returns uncertainty heatmaps."""
+    dummy_frame = np.zeros((64, 64), dtype=np.float32)
+    b64_str = frame_to_base64(dummy_frame)
+    payload = {
+        "frames": [b64_str] * 10,
+        "num_samples": 5,
+    }
+
+    response = client.post("/api/predict_uncertainty", json=payload)
+    if response.status_code != 200:
+        print("UNCERTAINTY ERROR:", response.json())
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "predicted_frames" in json_data
+    assert len(json_data["predicted_frames"]) == 10
+    assert "uncertainty_maps" in json_data
+    assert len(json_data["uncertainty_maps"]) == 10
+    assert "per_frame_uncertainty" in json_data
+    assert len(json_data["per_frame_uncertainty"]) == 10
+    assert "mean_uncertainty" in json_data
+    assert json_data["num_samples"] == 5
+
+
 
 

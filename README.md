@@ -136,21 +136,25 @@ Open **http://localhost:5173** to view the application.
 |----------|--------|-------------|
 | `/health` | GET | Server status, GPU device, and model parameter count |
 | `/api/predict` | POST | Forecast future frames from input context sequence |
+| `/api/predict_uncertainty` | POST | MC-Dropout stochastic inference for epistemic uncertainty maps |
+| `/api/upload-analyze` | POST | Custom picture upload analysis, 256-d latent extraction, and 2D spatial feature mapping |
 | `/api/generate` | POST | Generate custom simulation and model prediction |
 | `/api/samples` | GET | Pre-generated evaluation sequences |
 | `/api/metrics` | GET | Training metrics, loss components, and PSNR curves |
 | `/api/attention` | GET | Multi-head cross-attention weight maps |
+| `/api/benchmark` | GET | PyTorch vs ONNX Runtime latency comparison |
 
 ---
 
 ## 🖥️ Studio Pages
 
-1. **Overview**: Key metrics (PSNR, SSIM, parameter count), live context vs prediction comparison, interactive per-step PSNR bar chart.
+1. **Overview**: Key metrics (PSNR, SSIM, parameter count), live context vs prediction comparison, MC-Dropout epistemic uncertainty heatmaps, and interactive per-step PSNR bar chart.
 2. **Playground**: Real-time simulation parameter sliders (Pulse X/Y, Width, Amplitude) with instant model inference.
-3. **Latent Space**: 2D UMAP projection of frame tokens colored along temporal trajectories (gold → rose).
-4. **Attention Viz**: Layer-by-layer cross-attention heatmaps mapping context frames to predicted timesteps.
-5. **Training Dashboard**: Loss component breakdowns ($\mathcal{L}_{\text{recon}}$, $\mathcal{L}_{\text{latent}}$, $\mathcal{L}_{\text{perceptual}}$, $\mathcal{L}_{\text{temporal}}$) and rollout quality degradation plots.
-6. **Model Card**: Full technical specification, loss formulas, dataset specs, and tech stack details.
+3. **Image Upload**: Custom picture upload & 3-Stage Model Architecture Pipeline visualizer.
+4. **Latent Space**: 2D UMAP projection of frame tokens colored along temporal trajectories (gold → rose).
+5. **Attention Viz**: Layer-by-layer cross-attention heatmaps mapping context frames to predicted timesteps.
+6. **Training Dashboard**: Loss component breakdowns ($\mathcal{L}_{\text{recon}}$, $\mathcal{L}_{\text{latent}}$, $\mathcal{L}_{\text{perceptual}}$, $\mathcal{L}_{\text{temporal}}$) and rollout quality degradation plots.
+7. **Model Card**: Full technical specification, loss formulas, dataset specs, and tech stack details.
 
 ---
 
