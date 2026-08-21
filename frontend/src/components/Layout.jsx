@@ -21,12 +21,12 @@ export default function Layout({ children, isBackendOnline }) {
   );
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-[#1c130d] font-sans">
-      {/* ─── WARM PALETTE BACKGROUND GRADIENTS ───────────────────── */}
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[#211512] font-sans text-text-primary">
+      {/* ─── NEW COLOR PALETTE AMBIENT GLOWS ─────────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-8%] left-[-8%] w-[550px] h-[550px] rounded-full bg-gradient-to-br from-[#FFDBBB]/10 to-transparent blur-[140px] animate-pulse" style={{ animationDuration: '9s' }} />
-        <div className="absolute bottom-[5%] right-[-8%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#997E67]/15 to-transparent blur-[160px] animate-pulse" style={{ animationDuration: '13s' }} />
-        <div className="absolute top-[35%] left-[45%] w-[450px] h-[450px] rounded-full bg-gradient-to-bl from-[#664930]/20 to-transparent blur-[130px] animate-pulse" style={{ animationDuration: '11s' }} />
+        <div className="absolute top-[-8%] left-[-8%] w-[550px] h-[550px] rounded-full bg-gradient-to-br from-[#E4A499]/12 to-transparent blur-[140px] animate-pulse" style={{ animationDuration: '9s' }} />
+        <div className="absolute bottom-[5%] right-[-8%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#718A9E]/18 to-transparent blur-[160px] animate-pulse" style={{ animationDuration: '13s' }} />
+        <div className="absolute top-[35%] left-[45%] w-[450px] h-[450px] rounded-full bg-gradient-to-bl from-[#BC7B6F]/12 to-transparent blur-[130px] animate-pulse" style={{ animationDuration: '11s' }} />
       </div>
 
       {/* ─── LEFT SIDEBAR ─────────────────────────────────── */}
