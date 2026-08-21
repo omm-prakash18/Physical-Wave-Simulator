@@ -55,4 +55,14 @@ export async function predict(frames, returnLatents = false) {
   return res.data;
 }
 
+export async function uploadAndAnalyzeImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/api/upload-analyze', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+}
+
 export default api;
+

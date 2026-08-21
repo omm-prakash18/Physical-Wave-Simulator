@@ -7,7 +7,9 @@ import sys
 import json
 import numpy as np
 import torch
-from fastapi import APIRouter, HTTPException
+import io
+from PIL import Image
+from fastapi import APIRouter, HTTPException, File, UploadFile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,6 +20,7 @@ from api.schemas import (
     MetricsResponse,
     AttentionResponse,
     BenchmarkResponse,
+    UploadAnalysisResponse,
 )
 
 from api.demo_data import (
@@ -304,4 +307,121 @@ async def get_benchmark(num_runs: int = 10):
         speedup=round(speedup, 2),
         onnx_available=onnx_exists,
     )
+
+
+@router.post("/upload-analyze", response_model=UploadAnalysisResponse)
+async def upload_analyze(file: UploadFile = File(...)):
+    """
+    Accept an uploaded image file, preprocess it into a 64x64 grayscale wave frame,
+    extract its CNN latent embedding, analyze spatial features, and predict future evolution.
+    """
+    if _model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    try:
+        contents = await file.read()
+        img = Image.open(io.BytesIO(contents)).convert("L")
+        img_resized = img.resize((64, 64), Image.Resampling.BILINEAR)
+
+        # Scale pixel values to [-1, 1]
+        frame_np = np.array(img_resized).astype(np.float32) / 127.5 - 1.0
+
+        # Physical feature analysis
+        pos_frame = (frame_np + 1.0) / 2.0  # [0, 1]
+        total_energy = float(np.sum(pos_frame ** 2))
+        total_intensity = pos_frame.sum()
+
+        if total_intensity > 1e-5:
+            cy = float((np.sum(pos_frame, axis=1) * np.arange(64)).sum() / (total_intensity * 64.0))
+            cx = float((np.sum(pos_frame, axis=0) * np.arange(64)).sum() / (total_intensity * 64.0))
+        else:
+            cx, cy = 0.5, 0.5
+
+        center_x = max(0.1, min(0.9, cx))
+        center_y = max(0.1, min(0.9, cy))
+        amplitude = float((frame_np.max() - frame_np.min()) / 2.0)
+        width = float(np.clip(np.std(pos_frame) * 15.0, 2.0, 10.0))
+
+        # Radial spatial spectrum (16 bins)
+        y_grid, x_grid = np.ogrid[:64, :64]
+        r_grid = np.sqrt((x_grid - center_x * 64) ** 2 + (y_grid - center_y * 64) ** 2)
+        r_bins = np.linspace(0, 45, 16)
+        spectrum = []
+        for idx in range(len(r_bins) - 1):
+            mask = (r_grid >= r_bins[idx]) & (r_grid < r_bins[idx + 1])
+            val = float(pos_frame[mask].mean()) if np.any(mask) else 0.0
+            spectrum.append(round(val, 4))
+
+        # Calculate 2D Spatial Energy Gradient Vector Field (8x8 grid)
+        gy, gx = np.gradient(pos_frame)
+        grid_size = 8
+        cell_h = 64 // grid_size
+        cell_w = 64 // grid_size
+        spatial_vectors = []
+
+        for i in range(grid_size):
+            for j in range(grid_size):
+                r_start, r_end = i * cell_h, (i + 1) * cell_h
+                c_start, c_end = j * cell_w, (j + 1) * cell_w
+                cell_gx = float(gx[r_start:r_end, c_start:c_end].mean())
+                cell_gy = float(gy[r_start:r_end, c_start:c_end].mean())
+                mag = float(np.sqrt(cell_gx**2 + cell_gy**2))
+                angle = float(np.arctan2(cell_gy, cell_gx))
+                spatial_vectors.append({
+                    "x": round((j + 0.5) / grid_size, 3),
+                    "y": round((i + 0.5) / grid_size, 3),
+                    "dx": round(cell_gx, 4),
+                    "dy": round(cell_gy, 4),
+                    "magnitude": round(mag, 4),
+                    "angle": round(angle, 3),
+                })
+
+        # Form context tensor for model (1, 10, 1, 64, 64) by repeating input frame
+        context_arr = np.repeat(frame_np[np.newaxis, np.newaxis, ...], 10, axis=0)  # (10, 1, 64, 64)
+        context_tensor = torch.from_numpy(context_arr).unsqueeze(0).to(_device)    # (1, 10, 1, 64, 64)
+
+        b64_feat_map = None
+        with torch.no_grad():
+            single_tensor = torch.from_numpy(frame_np).unsqueeze(0).unsqueeze(0).to(_device) # (1, 1, 64, 64)
+            feat_stages = _model.encoder.extract_features(single_tensor)
+            if feat_stages and len(feat_stages) > 1:
+                feat_map = feat_stages[1][0].mean(dim=0).cpu().numpy()  # (16, 16) average feature map
+                f_min, f_max = feat_map.min(), feat_map.max()
+                feat_scaled = ((feat_map - f_min) / max(f_max - f_min, 1e-5) * 255.0).astype(np.uint8)
+                feat_img = Image.fromarray(feat_scaled).resize((64, 64), Image.Resampling.BILINEAR)
+                feat_buf = io.BytesIO()
+                feat_img.save(feat_buf, format="PNG")
+                b64_feat_map = base64.b64encode(feat_buf.getvalue()).decode("utf-8")
+
+            latents_all = _model.encode_frames(context_tensor)  # (1, 10, d_model)
+            latent_vec = latents_all[0, 0].cpu().numpy()
+            latent_norm = float(np.linalg.norm(latent_vec))
+
+            output = _model.predict_autoregressive(context_tensor)
+            predicted_np = output["predicted_frames"].cpu().numpy()[0]  # (10, 1, 64, 64)
+
+        b64_processed = frame_to_base64(frame_np)
+        b64_predictions = frames_to_base64_list(predicted_np)
+
+        return UploadAnalysisResponse(
+            original_filename=file.filename or "uploaded_image.png",
+            processed_frame=b64_processed,
+            feature_map_frame=b64_feat_map,
+            latent_vector=[round(float(v), 5) for v in latent_vec],
+            latent_norm=round(latent_norm, 4),
+            predicted_frames=b64_predictions,
+            estimated_params={
+                "center_x": round(center_x, 3),
+                "center_y": round(center_y, 3),
+                "amplitude": round(amplitude, 3),
+                "width": round(width, 3),
+                "total_energy": round(total_energy, 2),
+            },
+            spatial_spectrum=spectrum,
+            spatial_vectors=spatial_vectors,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
+
 

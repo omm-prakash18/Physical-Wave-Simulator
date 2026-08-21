@@ -99,3 +99,18 @@ class BenchmarkResponse(BaseModel):
     speedup: float
     onnx_available: bool
 
+
+class UploadAnalysisResponse(BaseModel):
+    """Response from /api/upload-analyze image upload endpoint."""
+    original_filename: str
+    processed_frame: str             # Base64 grayscale 64x64 frame
+    feature_map_frame: str | None = None # Base64 2D spatial feature activation map from CNN
+    latent_vector: list[float]       # 256-dim CNN encoder output
+    latent_norm: float               # L2 norm of latent vector
+    predicted_frames: list[str]      # Base64 predicted 10 frames
+    estimated_params: dict           # center_x, center_y, amplitude, width, total_energy
+    spatial_spectrum: list[float]    # Spatial energy distribution
+    spatial_vectors: list[dict]      # List of {x, y, dx, dy, magnitude, angle} gradient vectors
+
+
+

@@ -6,20 +6,20 @@
 /* ─── Design Tokens ──────────────────────────────────── */
 @theme {
   /* Backgrounds */
-  --color-canvas-bg: #1a1a2e;
-  --color-panel-bg: rgba(26, 26, 46, 0.55);
-  --color-border-color: rgba(212, 168, 83, 0.10);
+  --color-canvas-bg: #1c130d;
+  --color-panel-bg: rgba(102, 73, 48, 0.45);
+  --color-border-color: rgba(255, 219, 187, 0.12);
 
-  /* Accents */
-  --color-gold: #d4a853;
-  --color-gold-hover: #c49a42;
-  --color-rose: #c97b7b;
-  --color-sage: #7eb09b;
-  --color-lavender: #9b8ec4;
+  /* User Palette Tokens */
+  --color-gold: #FFDBBB;          /* #FFDBBB Soft Peach Cream */
+  --color-gold-hover: #e6c3a3;
+  --color-rose: #997E67;          /* #997E67 Warm Bronze */
+  --color-sage: #CCBEB1;          /* #CCBEB1 Light Warm Taupe */
+  --color-lavender: #664930;      /* #664930 Dark Warm Cocoa */
 
   /* Text */
-  --color-text-primary: #faf3e0;
-  --color-text-secondary: #b8a99a;
+  --color-text-primary: #FFDBBB;  /* Light Warm Cream */
+  --color-text-secondary: #CCBEB1;/* Light Warm Taupe */
 
   /* Fonts */
   --font-heading: 'Outfit', system-ui, sans-serif;
@@ -54,80 +54,80 @@ h1, h2, h3, h4, h5, h6 {
 .design-canvas {
   background-color: transparent;
   background-image:
-    linear-gradient(to right, rgba(212, 168, 83, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(212, 168, 83, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 219, 187, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 219, 187, 0.03) 1px, transparent 1px);
   background-size: 28px 28px;
   position: relative;
 }
 
 /* ─── Glass & Card Aesthetics ───────────────────────── */
 .canvas-card {
-  background: rgba(255, 248, 240, 0.03);
+  background: rgba(102, 73, 48, 0.25);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(212, 168, 83, 0.10);
+  border: 1px solid rgba(255, 219, 187, 0.14);
   border-radius: 20px;
   box-shadow:
-    inset 0 1px 1px rgba(255, 248, 240, 0.04),
-    0 12px 48px -12px rgba(0, 0, 0, 0.35);
+    inset 0 1px 1px rgba(255, 219, 187, 0.08),
+    0 12px 48px -12px rgba(0, 0, 0, 0.45);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .canvas-card:hover {
-  border-color: rgba(212, 168, 83, 0.18);
+  border-color: rgba(255, 219, 187, 0.25);
   box-shadow:
-    inset 0 1px 1px rgba(255, 248, 240, 0.06),
-    0 12px 48px -12px rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(212, 168, 83, 0.04);
+    inset 0 1px 1px rgba(255, 219, 187, 0.12),
+    0 12px 48px -12px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 219, 187, 0.06);
 }
 
 .glass-card {
-  background: rgba(255, 248, 240, 0.025);
+  background: rgba(102, 73, 48, 0.30);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(212, 168, 83, 0.08);
+  border: 1px solid rgba(255, 219, 187, 0.12);
   border-radius: 14px;
   box-shadow:
-    inset 0 1px 1px rgba(255, 248, 240, 0.03),
-    0 4px 24px -6px rgba(0, 0, 0, 0.25);
+    inset 0 1px 1px rgba(255, 219, 187, 0.06),
+    0 4px 24px -6px rgba(0, 0, 0, 0.35);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  background: rgba(255, 248, 240, 0.04);
-  border-color: rgba(212, 168, 83, 0.14);
+  background: rgba(102, 73, 48, 0.40);
+  border-color: rgba(255, 219, 187, 0.22);
   box-shadow:
-    inset 0 1px 1px rgba(255, 248, 240, 0.05),
-    0 8px 32px -6px rgba(0, 0, 0, 0.3);
+    inset 0 1px 1px rgba(255, 219, 187, 0.10),
+    0 8px 32px -6px rgba(0, 0, 0, 0.45);
 }
 
 /* Structural Glass Panels */
 .glass-panel-left {
-  background: rgba(22, 22, 40, 0.65) !important;
+  background: rgba(102, 73, 48, 0.55) !important;
   backdrop-filter: blur(28px) saturate(150%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(150%) !important;
-  border-color: rgba(212, 168, 83, 0.08) !important;
+  border-color: rgba(255, 219, 187, 0.12) !important;
 }
 
 .glass-panel-right {
-  background: rgba(22, 22, 40, 0.60) !important;
+  background: rgba(102, 73, 48, 0.50) !important;
   backdrop-filter: blur(28px) saturate(150%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(150%) !important;
-  border-color: rgba(212, 168, 83, 0.08) !important;
+  border-color: rgba(255, 219, 187, 0.12) !important;
 }
 
 .glass-panel-header {
-  background: rgba(20, 20, 38, 0.50) !important;
+  background: rgba(102, 73, 48, 0.40) !important;
   backdrop-filter: blur(28px) saturate(150%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(150%) !important;
-  border-color: rgba(212, 168, 83, 0.06) !important;
+  border-color: rgba(255, 219, 187, 0.10) !important;
 }
 
 .glass-panel-footer {
-  background: rgba(18, 18, 34, 0.70) !important;
+  background: rgba(102, 73, 48, 0.60) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border-color: rgba(212, 168, 83, 0.06) !important;
+  border-color: rgba(255, 219, 187, 0.10) !important;
 }
 
 /* ─── Sidebar Nav Items ──────────────────────────────── */
@@ -146,17 +146,17 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar-link:hover {
   color: var(--color-text-primary);
-  background: rgba(212, 168, 83, 0.06);
-  box-shadow: inset 0 1px 1px rgba(255, 248, 240, 0.04);
+  background: rgba(255, 219, 187, 0.08);
+  box-shadow: inset 0 1px 1px rgba(255, 219, 187, 0.06);
 }
 
 .sidebar-link.active {
-  background: linear-gradient(135deg, var(--color-gold) 0%, #c49a42 100%);
-  color: #1a1a2e;
+  background: linear-gradient(135deg, #FFDBBB 0%, #CCBEB1 100%);
+  color: #382414;
   font-weight: 600;
   box-shadow:
-    0 4px 18px rgba(212, 168, 83, 0.25),
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    0 4px 18px rgba(255, 219, 187, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
 /* ─── macOS Dots ─────────────────────────────────────── */

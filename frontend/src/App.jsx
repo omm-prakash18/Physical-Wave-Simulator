@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import Playground from './pages/Playground';
+import ImageAnalysis from './pages/ImageAnalysis';
 import LatentExplorer from './pages/LatentExplorer';
 import AttentionViz from './pages/AttentionViz';
 import TrainingDashboard from './pages/TrainingDashboard';
@@ -29,6 +30,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Overview isBackendOnline={isBackendOnline} />} />
         <Route path="/playground" element={<Playground isBackendOnline={isBackendOnline} />} />
+        <Route path="/upload" element={<ImageAnalysis isBackendOnline={isBackendOnline} />} />
         <Route path="/latent" element={<LatentExplorer isBackendOnline={isBackendOnline} />} />
         <Route path="/attention" element={<AttentionViz isBackendOnline={isBackendOnline} />} />
         <Route path="/training" element={<TrainingDashboard isBackendOnline={isBackendOnline} />} />

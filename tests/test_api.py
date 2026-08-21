@@ -106,3 +106,35 @@ def test_benchmark_endpoint(client):
     assert "speedup" in json_data
     assert "onnx_available" in json_data
 
+
+def test_upload_analyze_endpoint(client):
+    """Verify POST /api/upload-analyze accepts an image file and returns wave analysis."""
+    import io
+    from PIL import Image
+
+    # Create dummy PNG image bytes
+    img = Image.new("L", (100, 100), color=128)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    files = {"file": ("test_wave.png", buf, "image/png")}
+    response = client.post("/api/upload-analyze", files=files)
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["original_filename"] == "test_wave.png"
+    assert "processed_frame" in json_data
+    assert "latent_vector" in json_data
+    assert len(json_data["latent_vector"]) == 256
+    assert "predicted_frames" in json_data
+    assert len(json_data["predicted_frames"]) == 10
+    assert "estimated_params" in json_data
+    assert "center_x" in json_data["estimated_params"]
+    assert "spatial_spectrum" in json_data
+    assert "spatial_vectors" in json_data
+    assert len(json_data["spatial_vectors"]) == 64
+    assert "dx" in json_data["spatial_vectors"][0]
+    assert "dy" in json_data["spatial_vectors"][0]
+    assert "feature_map_frame" in json_data
+
+
