@@ -146,11 +146,26 @@ def main():
     r2_w = solve_linear_regression(X_train, y_w[train_indices], X_val, y_w[val_indices])
     r2_a = solve_linear_regression(X_train, y_a[train_indices], X_val, y_a[val_indices])
 
+    # 4. Calculate latent representation statistics (spread & decorrelation)
+    std_dims = np.std(X, axis=0)
+    min_std = float(np.min(std_dims))
+    mean_std = float(np.mean(std_dims))
+    max_std = float(np.max(std_dims))
+
+    corr_matrix = np.corrcoef(X, rowvar=False)
+    # Fill diagonal with 0 to ignore self-correlation
+    np.fill_diagonal(corr_matrix, 0.0)
+    max_off_diag_corr = float(np.max(np.abs(corr_matrix)))
+
     print("\nProbing Results (Validation R2):")
     print(f"  - Pulse Center X:   {r2_x:.4f}")
     print(f"  - Pulse Center Y:   {r2_y:.4f}")
     print(f"  - Pulse Width (sigma): {r2_w:.4f}")
     print(f"  - Wave Amplitude:   {r2_a:.4f}")
+
+    print("\nLatent Space Representation Statistics:")
+    print(f"  - Per-dimension std:  min={min_std:.4f}, mean={mean_std:.4f}, max={max_std:.4f}")
+    print(f"  - Max off-diagonal correlation: {max_off_diag_corr:.4f}")
 
     # Save to json file
     results = {
@@ -158,6 +173,10 @@ def main():
         "r2_center_y": round(r2_y, 4),
         "r2_width": round(r2_w, 4),
         "r2_amplitude": round(r2_a, 4),
+        "min_std": round(min_std, 4),
+        "mean_std": round(mean_std, 4),
+        "max_std": round(max_std, 4),
+        "max_off_diagonal_correlation": round(max_off_diag_corr, 4),
         "num_samples": num_samples,
     }
 

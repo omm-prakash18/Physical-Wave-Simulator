@@ -129,10 +129,20 @@ class CombinedLoss(nn.Module):
         lambda_perceptual: float = 0.1,
         lambda_temporal: float = 0.5,
         use_learned_weights: bool = True,
+        use_vicreg: bool = True,
+        lambda_var: float = 1.0,
+        lambda_cov: float = 0.04,
+        lambda_inv: float = 0.5,
+        lambda_anchor: float = 1e-4,
     ):
         super().__init__()
 
         self.use_learned_weights = use_learned_weights
+        self.use_vicreg = use_vicreg
+        self.lambda_var = lambda_var
+        self.lambda_cov = lambda_cov
+        self.lambda_inv = lambda_inv
+        self.lambda_anchor = lambda_anchor
 
         self.recon_loss = ReconstructionLoss()
         self.latent_loss = LatentPredictionLoss()
@@ -161,6 +171,7 @@ class CombinedLoss(nn.Module):
         target_frames: torch.Tensor,
         predicted_latents: torch.Tensor,
         target_latents: torch.Tensor,
+        context_latents: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, dict[str, float]]:
         """
         Compute combined loss.
@@ -208,5 +219,50 @@ class CombinedLoss(nn.Module):
                 "loss/temporal": l_temporal.item(),
             }
 
+        # Apply VICReg latent space regularization (Phase 2)
+        if self.use_vicreg and context_latents is not None:
+            # Flatten context_latents (B, T_in, D) -> (B * T_in, D)
+            Z = context_latents.reshape(-1, context_latents.size(-1))
+            D = Z.size(-1)
+            eps = 1e-4
+            gamma = 1.0
+
+            # 1. Variance term (prevents dimension collapse)
+            std = torch.sqrt(torch.var(Z, dim=0) + eps)
+            l_var = torch.mean(torch.clamp(gamma - std, min=0.0))
+
+            # 2. Covariance term (off-diagonal decorrelation)
+            Z_mean = torch.mean(Z, dim=0, keepdim=True)
+            Z_centered = Z - Z_mean
+            N = Z.size(0)
+            cov = (Z_centered.T @ Z_centered) / max(N - 1, 1)
+            cov_squared = cov ** 2
+            off_diag_mask = torch.ones_like(cov_squared) - torch.eye(D, device=cov.device)
+            l_cov = (cov_squared * off_diag_mask).sum() / D
+
+            # 3. Temporal Invariance term (smoothness between consecutive frames)
+            l_inv_vic = F.mse_loss(context_latents[:, 1:], context_latents[:, :-1])
+
+            # 4. L2 Magnitude Anchor
+            l_anchor = torch.mean(context_latents ** 2)
+
+            # Add to total loss
+            total = (
+                total
+                + self.lambda_var * l_var
+                + self.lambda_cov * l_cov
+                + self.lambda_inv * l_inv_vic
+                + self.lambda_anchor * l_anchor
+            )
+
+            components.update({
+                "loss/vicreg_var": l_var.item(),
+                "loss/vicreg_cov": l_cov.item(),
+                "loss/vicreg_inv": l_inv_vic.item(),
+                "loss/vicreg_anchor": l_anchor.item(),
+                "loss/total": total.item(),  # update logged total loss
+            })
+
         return total, components
+
 

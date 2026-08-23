@@ -84,7 +84,13 @@ def train(config: Config):
         lambda_latent=config.train.lambda_latent,
         lambda_perceptual=config.train.lambda_perceptual,
         lambda_temporal=config.train.lambda_temporal,
+        use_vicreg=config.train.use_vicreg,
+        lambda_var=config.train.lambda_var,
+        lambda_cov=config.train.lambda_cov,
+        lambda_inv=config.train.lambda_inv,
+        lambda_anchor=config.train.lambda_anchor,
     ).to(device)
+
 
     # ─── Optimizer ──────────────────────────────────────
     optimizer = torch.optim.AdamW(
@@ -184,6 +190,7 @@ def train(config: Config):
                     target_frames=target[:, :curr_steps],
                     predicted_latents=output["predicted_latents"][:, :curr_steps],
                     target_latents=output["target_latents"][:, :curr_steps],
+                    context_latents=output["context_latents"],
                 )
 
                 # Scale for gradient accumulation
@@ -266,6 +273,7 @@ def train(config: Config):
                         target_frames=target,
                         predicted_latents=output["predicted_latents"],
                         target_latents=output["target_latents"],
+                        context_latents=output["context_latents"],
                     )
 
                     val_loss_total += components["loss/total"]

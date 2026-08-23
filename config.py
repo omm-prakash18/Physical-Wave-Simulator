@@ -78,6 +78,14 @@ class TrainConfig:
     lambda_perceptual: float = 0.1
     lambda_temporal: float = 0.5
 
+    # VICReg regularization (Phase 2)
+    use_vicreg: bool = True
+    lambda_var: float = 1.0        # Weight for variance term
+    lambda_cov: float = 0.04       # Weight for off-diagonal covariance decorrelation
+    lambda_inv: float = 0.5        # Weight for temporal invariance (smoothness)
+    lambda_anchor: float = 1e-4    # Weight for L2 magnitude anchor
+
+
     # Logging
     log_interval: int = 50       # log every N steps
     eval_interval: int = 1       # evaluate every N epochs
