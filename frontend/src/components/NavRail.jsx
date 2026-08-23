@@ -106,7 +106,7 @@ export default function NavRail({
 
         {/* Navigation list */}
         <nav
-          className="space-y-1 pt-2"
+          className="space-y-2 pt-3"
           onKeyDown={handleKeyDown}
           aria-label="Primary"
         >
@@ -115,7 +115,7 @@ export default function NavRail({
               key={path}
               to={path}
               className={({ isActive }) => `
-                sidebar-link-btn flex items-center gap-3 p-2.5 rounded-lg text-xs font-semibold select-none transition-snappy
+                sidebar-link-btn flex items-center gap-3.5 py-3 px-4 rounded-lg text-xs font-semibold select-none transition-snappy
                 focus-visible:ring-2 focus-visible:ring-accent-gold/45 focus:outline-none
                 ${isActive
                   ? 'bg-accent-gold text-canvas-deep shadow-glow-gold'
@@ -124,7 +124,7 @@ export default function NavRail({
               `}
               title={label}
             >
-              <span className="text-sm shrink-0" aria-hidden="true">{icon}</span>
+              <span className="w-5 h-5 flex items-center justify-center text-sm shrink-0" aria-hidden="true">{icon}</span>
               {!isCollapsed && <span className="truncate">{label}</span>}
             </NavLink>
           ))}
