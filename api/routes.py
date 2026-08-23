@@ -102,6 +102,9 @@ async def predict(request: PredictRequest):
         frames_arr = np.stack(frames_np, axis=0)
         frames_tensor = torch.from_numpy(frames_arr).unsqueeze(0).unsqueeze(2).to(_device)
 
+        # Set decoding mode dynamically (Phase 3)
+        _model.transformer.decoding_mode = request.decoding_mode
+
         # Predict
         with torch.no_grad():
             output = _model.predict_autoregressive(frames_tensor)
@@ -145,6 +148,9 @@ async def generate(request: GenerateRequest):
 
         # Predict
         context_tensor = torch.from_numpy(context).unsqueeze(0).to(_device)
+        # Set decoding mode dynamically (Phase 3)
+        _model.transformer.decoding_mode = request.decoding_mode
+
         with torch.no_grad():
             output = _model.predict_autoregressive(context_tensor)
         predicted = output["predicted_frames"].cpu().numpy()[0]

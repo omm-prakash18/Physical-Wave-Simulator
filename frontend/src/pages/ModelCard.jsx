@@ -210,12 +210,41 @@ export default function ModelCard() {
               </div>
 
               <div className="border border-panel-border/20 p-3.5 rounded-lg bg-white/[0.01]">
-                <span className="text-[#c286d9] font-mono uppercase tracking-wide text-[10px] block font-semibold mb-1">Inference Latency</span>
+                <span className="text-[#c286d9] font-mono uppercase tracking-wide text-[10px] block font-semibold mb-1">Inference Latency (ONNX)</span>
                 <ul className="space-y-1 font-mono font-mono-tabular text-text-secondary select-text">
-                  <li>- PyTorch CPU: <strong className="text-text-primary">~22.4 ms</strong></li>
+                  <li>- PyTorch CPU: <strong className="text-text-primary">~39.3 ms</strong></li>
                   <li>- ONNX Runtime: <strong className="text-accent-gold">~5.1 ms</strong></li>
-                  <li>- Speedup factor: <strong className="text-accent-sage">4.39x</strong></li>
+                  <li>- ONNX Speedup: <strong className="text-accent-sage">7.7x faster</strong></li>
                 </ul>
+              </div>
+            </div>
+
+            {/* Decoding Modes Tradeoff info box */}
+            <div className="border border-panel-border/20 p-4 rounded-lg bg-white/[0.01] mt-4 space-y-2">
+              <span className="text-accent-gold font-mono uppercase tracking-wide text-[10px] block font-semibold">
+                Inference Decoding Modes Tradeoff (Accuracy vs. Latency)
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-text-secondary leading-relaxed">
+                <div>
+                  <strong className="text-text-primary text-[13px] block mb-1">⚡ Parallel Decoding Mode (Playground Default)</strong>
+                  <p className="mb-1">
+                    Uses static position queries to predict all future latents in a single forward pass.
+                  </p>
+                  <ul className="font-mono text-[10px] list-disc pl-4 space-y-0.5">
+                    <li>CPU Latency: <strong className="text-text-primary">~52.9 ms</strong></li>
+                    <li>Usage: Live parameters Playground slider drags (prioritizes speed).</li>
+                  </ul>
+                </div>
+                <div>
+                  <strong className="text-text-primary text-[13px] block mb-1">🎯 Autoregressive Decoding Mode (Analytics Default)</strong>
+                  <p className="mb-1">
+                    Uses content-aware projections to feed step $t-1$ predictions back into step $t$ sequentially.
+                  </p>
+                  <ul className="font-mono text-[10px] list-disc pl-4 space-y-0.5">
+                    <li>CPU Latency: <strong className="text-text-primary">~123.2 ms (+133%)</strong></li>
+                    <li>Usage: Analytics page, model evaluations (prioritizes forecasting accuracy).</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

@@ -46,6 +46,7 @@ class LatentVideoPredictor(nn.Module):
         dropout: float = 0.1,
         t_in: int = 10,
         t_out: int = 10,
+        decoding_mode: str = "parallel",
     ):
         super().__init__()
 
@@ -69,6 +70,7 @@ class LatentVideoPredictor(nn.Module):
             dropout=dropout,
             t_in=t_in,
             t_out=t_out,
+            decoding_mode=decoding_mode,
         )
 
         # CNN Decoder
@@ -162,6 +164,13 @@ class LatentVideoPredictor(nn.Module):
             "target_latents": target_latents,
             "attention_weights": transformer_out["attention_weights"],
         }
+
+    def load_state_dict(self, state_dict, strict=True):
+        """Custom loader to prevent crashes if latent_proj weights are missing in checkpoints."""
+        has_proj = any("latent_proj" in k for k in state_dict.keys())
+        if not has_proj:
+            return super().load_state_dict(state_dict, strict=False)
+        return super().load_state_dict(state_dict, strict=strict)
 
     def count_parameters(self) -> dict:
         """Count parameters per component."""

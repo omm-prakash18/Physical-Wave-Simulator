@@ -69,6 +69,7 @@ def train(config: Config):
         dropout=config.model.dropout,
         t_in=config.model.t_in,
         t_out=config.model.t_out,
+        decoding_mode=config.model.decoding_mode,
     ).to(device)
 
     param_counts = model.count_parameters()

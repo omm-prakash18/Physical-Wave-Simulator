@@ -51,6 +51,10 @@ class ModelConfig:
     t_in: int = 10   # context frames
     t_out: int = 10  # predicted frames
 
+    # Decoding mode (parallel vs autoregressive)
+    decoding_mode: str = "parallel"  # "parallel" | "autoregressive"
+
+
 
 @dataclass
 class TrainConfig:

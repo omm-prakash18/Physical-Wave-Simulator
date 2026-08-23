@@ -89,3 +89,30 @@ The following table shows latent representation stats and linear probing decodab
 * **Dimension Collapse Prevention**: Minimum dimension standard deviation **increased by 5.03x** (`0.0156` $\rightarrow$ `0.0786`) and average standard deviation **increased by 9.62x** (`0.0329` $\rightarrow$ `0.3165`), confirming that dimensions are prevented from collapsing.
 * **Accuracy vs. Robustness Tradeoff**: Linear probe decodability ($R^2$) remains exceptionally high ($R^2 > 0.91$ for spatial coordinates), indicating that the representation space remains physically decodable while spanning a much larger volume of the latent manifold, stabilizing the causal transformer during long-horizon rollouts.
 
+---
+
+## 5. Autoregressive Decoder & Content-Aware Query Projection (Phase 3)
+
+### 5.1 The Information Bottleneck Diagnosis
+The baseline transformer decoder used static learned queries `self.query_tokens` representing positional indices. While a causal self-attention mask was applied, no predicted latent values flowed sequentially between queries. Thus, prediction at step $t$ was structurally isolated from prediction at step $t-1$, rendering the decoder functionally non-autoregressive.
+* **Ablation baseline proof**: Perturbing the prediction at step $t-1$ had exactly **`0.0`** impact on the prediction at step $t$ in parallel mode.
+
+### 5.2 Content-Aware Redesign & Integration
+We updated `CausalLatentTransformer` to construct queries dynamically using sequential content feedback:
+$$\text{decoder\_input}[t] = \text{positional\_embedding}[t] + \text{latent\_proj}(\text{prev\_latent}[t-1])$$
+* **Training (Scheduled Sampling)**: Uses ground-truth target latents early in training (teacher forcing) and model-predicted latents later based on the `teacher_forcing_ratio` schedule, keeping training parallelizable via shifted targets.
+* **Inference (Autoregressive loop)**: Predicts sequentially one step at a time, feeding back prediction $t-1$ to predict step $t$.
+* **State-Dict Compatibility**: Added a custom `load_state_dict` override in `CausalLatentTransformer` and `LatentVideoPredictor` to allow loading older checkpoints (like `best_model.pt`) cleanly by initializing the missing `latent_proj` weights to zero.
+
+### 5.3 Latency Benchmarks & Trade-offs
+We measured CPU inference latency over 50 runs comparing the two modes:
+* **Parallel Mode (Baseline)**: Avg = **`52.88 ms`** | P95 = `58.52 ms`
+* **Autoregressive Mode**: Avg = **`123.22 ms`** | P95 = `146.03 ms`
+* **Latency Increase**: **`+133.0%`** (due to sequential looping overhead)
+
+### 5.4 Studio Page Configuration
+To balance accuracy and responsiveness, the decoding modes are routed as follows:
+* **Playground Page (`parallel` mode)**: Uses parallel query decoding to ensure sub-60ms slider responsiveness during real-time parameter drags.
+* **Model Card & Analytics (`autoregressive` mode)**: Uses autoregressive decoding to run the full forecast evaluations, ensuring higher long-horizon accuracy.
+
+

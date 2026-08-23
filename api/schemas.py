@@ -20,6 +20,7 @@ class PredictRequest(BaseModel):
         min_length=1,
     )
     return_latents: bool = Field(default=False, description="Include latent vectors in response.")
+    decoding_mode: str = Field(default="parallel", description="Decoding mode: parallel or autoregressive.")
 
 
 class PredictResponse(BaseModel):
@@ -36,6 +37,8 @@ class GenerateRequest(BaseModel):
     center_y: float = Field(default=0.5, ge=0.1, le=0.9)
     width: float = Field(default=5.0, ge=2.0, le=10.0)
     amplitude: float = Field(default=0.8, ge=0.1, le=1.0)
+    decoding_mode: str = Field(default="parallel", description="Decoding mode: parallel or autoregressive.")
+
 
 
 class GenerateResponse(BaseModel):

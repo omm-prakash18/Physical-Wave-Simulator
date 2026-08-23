@@ -133,17 +133,24 @@ class CausalLatentTransformer(nn.Module):
         dropout: float = 0.1,
         t_in: int = 10,
         t_out: int = 10,
+        decoding_mode: str = "parallel",
     ):
         super().__init__()
         self.d_model = d_model
         self.t_in = t_in
         self.t_out = t_out
+        self.decoding_mode = decoding_mode
 
         # Positional encodings
         self.pos_enc = SinusoidalPositionalEncoding(d_model, max_len=t_in + t_out + 10)
 
         # Learned query tokens for prediction horizon
         self.query_tokens = nn.Parameter(torch.randn(1, t_out, d_model) * 0.02)
+
+        # Content-aware projection (Phase 3)
+        self.latent_proj = nn.Linear(d_model, d_model)
+        nn.init.zeros_(self.latent_proj.weight)
+        nn.init.zeros_(self.latent_proj.bias)
 
         self.encoder_norm = nn.LayerNorm(d_model)
         self.decoder_norm = nn.LayerNorm(d_model)
@@ -165,6 +172,13 @@ class CausalLatentTransformer(nn.Module):
         # Zero-init bias for stable early training
         nn.init.zeros_(self.output_proj.bias)
         nn.init.xavier_uniform_(self.output_proj.weight, gain=0.1)
+
+    def load_state_dict(self, state_dict, strict=True):
+        """Custom loader to prevent crashes if latent_proj weights are missing in checkpoints."""
+        has_proj = any("latent_proj" in k for k in state_dict.keys())
+        if not has_proj:
+            return super().load_state_dict(state_dict, strict=False)
+        return super().load_state_dict(state_dict, strict=strict)
 
     def _build_causal_mask(self, length: int, device: torch.device) -> torch.Tensor:
         """Causal self-attention mask for the decoder queries."""
@@ -202,42 +216,90 @@ class CausalLatentTransformer(nn.Module):
             memory = layer(memory)
 
         # ─── Decoder ────────────────────────────────────────
-        # Prepare queries
-        queries = self.query_tokens.expand(B, -1, -1)  # (B, T_out, d_model)
+        if self.decoding_mode == "autoregressive":
+            # Step-by-step sequential feedback generation
+            predicted_latents = torch.zeros(B, self.t_out, self.d_model, device=device)
+            cross_weights = None
+            queries_so_far = None
 
-        # Teacher forcing
-        if target_latents is not None and teacher_forcing_ratio > 0:
-            tf_mask = (
-                torch.rand(B, self.t_out, 1, device=device) < teacher_forcing_ratio
-            ).float()
-            # Feed context[-1] for step 0 prediction, target[t-1] for step t prediction.
-            shifted_target = torch.cat([context_latents[:, -1:], target_latents[:, :-1]], dim=1)
-            queries = tf_mask * shifted_target + (1.0 - tf_mask) * queries
+            for t in range(self.t_out):
+                # Determine prev_latent[t-1]
+                if t == 0:
+                    prev_z = context_latents[:, -1]
+                else:
+                    if target_latents is not None and teacher_forcing_ratio > 0:
+                        # Scheduled sampling logic: select between GT and predicted latent
+                        use_gt = torch.rand(B, 1, device=device) < teacher_forcing_ratio
+                        prev_z = torch.where(use_gt, target_latents[:, t-1], predicted_latents[:, t-1])
+                    else:
+                        prev_z = predicted_latents[:, t-1]
 
-        # Add positional encoding to decoder queries (offset = T_in)
-        queries = self.decoder_norm(queries)
-        queries = self.pos_enc(queries, offset=self.t_in)
+                # Project previous latent and add position embedding
+                query_t = self.query_tokens[:, t:t+1].expand(B, -1, -1) + self.latent_proj(prev_z).unsqueeze(1)
 
-        # Self-attention mask (causal)
-        self_mask = self._build_causal_mask(self.t_out, device)
+                if t == 0:
+                    queries_so_far = query_t
+                else:
+                    queries_so_far = torch.cat([queries_so_far, query_t], dim=1)
 
-        # Run decoder layers
-        cross_weights = None
-        for i, layer in enumerate(self.decoder_layers):
-            is_last = (i == len(self.decoder_layers) - 1)
-            queries, weights = layer(
-                queries, memory,
-                self_attn_mask=self_mask,
-                need_weights=(is_last and need_weights),
-            )
-            if is_last and need_weights:
-                cross_weights = weights
+                # Feed queries constructed so far through decoder
+                queries_input = self.decoder_norm(queries_so_far)
+                queries_input = self.pos_enc(queries_input, offset=self.t_in)
 
-        # Output projection
-        predicted = self.output_norm(queries)
-        predicted = self.output_proj(predicted)
+                self_mask = self._build_causal_mask(t + 1, device)
+
+                curr_queries = queries_input
+                for idx, layer in enumerate(self.decoder_layers):
+                    is_last = (idx == len(self.decoder_layers) - 1)
+                    curr_queries, weights = layer(
+                        curr_queries, memory,
+                        self_attn_mask=self_mask,
+                        need_weights=(is_last and need_weights and t == self.t_out - 1),
+                    )
+                    if is_last and need_weights and t == self.t_out - 1:
+                        cross_weights = weights
+
+                # Extract prediction at step t
+                pred_t = self.output_norm(curr_queries[:, t:t+1])
+                pred_t = self.output_proj(pred_t)
+                predicted_latents[:, t:t+1] = pred_t
+
+            predicted = predicted_latents
+        else:
+            # Parallel query-token decoding (standard/old path)
+            queries = self.query_tokens.expand(B, -1, -1)  # (B, T_out, d_model)
+
+            # Parallel teacher forcing using shifted targets
+            if target_latents is not None:
+                shifted_target = torch.cat([context_latents[:, -1:], target_latents[:, :-1]], dim=1)
+                # Apply content-aware projections if target_latents are available
+                queries = queries + self.latent_proj(shifted_target)
+
+            # Add positional encoding to decoder queries (offset = T_in)
+            queries = self.decoder_norm(queries)
+            queries = self.pos_enc(queries, offset=self.t_in)
+
+            # Self-attention mask (causal)
+            self_mask = self._build_causal_mask(self.t_out, device)
+
+            # Run decoder layers
+            cross_weights = None
+            for i, layer in enumerate(self.decoder_layers):
+                is_last = (i == len(self.decoder_layers) - 1)
+                queries, weights = layer(
+                    queries, memory,
+                    self_attn_mask=self_mask,
+                    need_weights=(is_last and need_weights),
+                )
+                if is_last and need_weights:
+                    cross_weights = weights
+
+            # Output projection
+            predicted = self.output_norm(queries)
+            predicted = self.output_proj(predicted)
 
         return {
             "predicted_latents": predicted,
             "attention_weights": [cross_weights] if cross_weights is not None else None,
         }
+
