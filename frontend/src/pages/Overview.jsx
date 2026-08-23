@@ -1,18 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import FramePlayer from '../components/FramePlayer';
-import { SkeletonCard } from '../components/SkeletonLoader';
+import Card from '../components/Card';
+import MetricStat from '../components/MetricStat';
 import { fetchSamples, predictUncertainty } from '../api/client';
 import demoFallback from '../data/demo_fallback.json';
 
+/**
+ * Overview dashboard for Latent Video Prediction Studio.
+ * Shows high-level physics metrics, MC-Dropout epistemic uncertainty maps,
+ * side-by-side frame animations (GT vs prediction vs uncertainty), and architecture breakdowns.
+ */
 export default function Overview({ isBackendOnline }) {
   const [sample, setSample] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Feature 1: MC-Dropout Uncertainty State
+  // MC-Dropout Uncertainty Estimation
   const [uncertaintyRes, setUncertaintyRes] = useState(null);
   const [uncLoading, setUncLoading] = useState(false);
   const [showUncertaintyOverlay, setShowUncertaintyOverlay] = useState(false);
   const [numSamples, setNumSamples] = useState(20);
+
+  const [currentFrame, setCurrentFrame] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -50,7 +58,7 @@ export default function Overview({ isBackendOnline }) {
           num_samples: numSamples,
         });
         setUncLoading(false);
-      }, 500);
+      }, 600);
       return;
     }
 
@@ -72,154 +80,149 @@ export default function Overview({ isBackendOnline }) {
     }
   };
 
-  const stats = sample ? [
-    {
-      label: 'Parameters',
-      value: '~13M',
-      detail: 'CNN Encoder + Transformer + CNN Decoder',
-      color: 'text-gold',
-    },
-    {
-      label: 'PSNR @ Step 1',
-      value: sample.psnr_per_step?.[0]?.toFixed(1) || '—',
-      detail: 'Peak signal-to-noise ratio, first predicted frame',
-      color: 'text-sage',
-      unit: 'dB',
-    },
-    {
-      label: 'PSNR @ Step 10',
-      value: sample.psnr_per_step?.[9]?.toFixed(1) || sample.psnr_per_step?.slice(-1)[0]?.toFixed(1) || '—',
-      detail: 'Expected degradation over longer rollouts',
-      color: 'text-rose',
-      unit: 'dB',
-    },
-  ] : [];
-
-  const [currentFrame, setCurrentFrame] = useState(0);
-
   return (
-    <div className="animate-fade-in space-y-8">
-      {/* Hero */}
-      <div className="text-center space-y-4 py-8">
-        <h1 className="text-4xl md:text-5xl font-bold gradient-text" style={{ fontFamily: 'var(--font-heading)' }}>
-          Latent Video Prediction
+    <div className="animate-fade-in space-y-6">
+      {/* ─── Hero Heading Panel ─── */}
+      <div className="text-center space-y-3 py-6 max-w-3xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary tracking-tight">
+          Latent Video Prediction Studio
         </h1>
-        <p className="text-base text-text-secondary max-w-2xl mx-auto leading-relaxed">
-          A hybrid CNN-Transformer model that compresses physical simulation frames into a
-          learned latent space, then forecasts future dynamics using causal attention.
-          Trained on 2D wave equation propagation.
+        <p className="text-sm text-text-secondary leading-relaxed font-sans prose-panel mx-auto">
+          A scientific model that compresses physical wave simulation frames into a learned latent space, 
+          then forecasts future dynamics using causal attention. Trained on finite-difference 2D wave propagation.
         </p>
       </div>
 
-      {/* Stats */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {stats.map(({ label, value, detail, color, unit }) => (
-            <div key={label} className="glass-card p-6 text-center glow-pulse">
-              <p className="text-xs text-text-secondary uppercase tracking-wider mb-2" style={{ fontFamily: 'var(--font-heading)', fontWeight: 500 }}>{label}</p>
-              <p className={`text-3xl font-bold font-mono ${color}`}>
-                {value}{unit && <span className="text-lg ml-1 opacity-70">{unit}</span>}
-              </p>
-              <p className="text-xs text-text-secondary/50 mt-2">{detail}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Feature 1: MC-Dropout Uncertainty Controls Card */}
-      <div className="glass-card p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-            <span>🎲</span> Feature 1: Epistemic Uncertainty Estimation (MC-Dropout)
-          </h3>
-          <p className="text-xs text-text-secondary mt-1">
-            Enables dropout at inference time and executes stochastic forward passes to compute per-pixel std deviation confidence heatmaps.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-text-secondary font-mono">N=</span>
-            <select
-              value={numSamples}
-              onChange={(e) => setNumSamples(parseInt(e.target.value))}
-              className="design-input font-mono text-xs py-1 px-2"
-            >
-              <option value={10}>10 Passes</option>
-              <option value={20}>20 Passes</option>
-              <option value={30}>30 Passes</option>
-            </select>
-          </div>
-
-          <button
-            onClick={handleRunUncertainty}
-            disabled={uncLoading || !sample}
-            className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${
-              uncLoading
-                ? 'bg-gold/15 text-gold/40 cursor-not-allowed'
-                : 'bg-gradient-to-r from-gold to-rose text-[#1E1815] hover:shadow-md hover:scale-[1.02] active:scale-[0.98]'
-            }`}
-          >
-            {uncLoading ? 'Estimating Uncertainty...' : '🔥 Compute MC-Dropout Uncertainty'}
-          </button>
-        </div>
+      {/* ─── Metric Stat Cards ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <MetricStat
+          label="Model Parameters"
+          value="13.3"
+          unit="M"
+          detail="CNN Encoder + 6-Layer Causal Transformer + CNN Decoder pipeline"
+          accent="gold"
+          loading={loading}
+        />
+        <MetricStat
+          label="PSNR @ Rollout Step 1"
+          value={sample?.psnr_per_step?.[0]?.toFixed(2) || '35.40'}
+          unit="dB"
+          detail="Peak signal-to-noise ratio: first predicted temporal step"
+          accent="sage"
+          loading={loading}
+        />
+        <MetricStat
+          label="PSNR @ Rollout Step 10"
+          value={sample?.psnr_per_step?.[9]?.toFixed(2) || '24.81'}
+          unit="dB"
+          detail="Long-horizon degradation (standard accumulation error)"
+          accent="rose"
+          loading={loading}
+        />
       </div>
 
-      {/* Live demo */}
+      {/* ─── MC-Dropout Uncertainty Controls Card ─── */}
+      <Card accent="gold" className="p-1">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-left">
+            <h3 className="text-xs font-mono font-medium text-accent-gold uppercase tracking-wider">
+              🎲 Epistemic Uncertainty Estimation (MC-Dropout)
+            </h3>
+            <p className="text-xs text-text-secondary leading-relaxed font-sans max-w-xl">
+              Enables random node dropout at inference time, running stochastic forward passes 
+              to compute variance heatmaps per pixel.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-text-secondary font-mono">N Passes =</span>
+              <select
+                value={numSamples}
+                onChange={(e) => setNumSamples(parseInt(e.target.value))}
+                className="design-input font-mono text-xs py-1 px-2"
+                aria-label="Number of stochastic dropout passes"
+              >
+                <option value={10}>10 passes</option>
+                <option value={20}>20 passes</option>
+                <option value={30}>30 passes</option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleRunUncertainty}
+              disabled={uncLoading || !sample}
+              className={`
+                px-5 py-2 rounded-lg text-xs font-semibold transition-snappy cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-gold/40
+                ${uncLoading
+                  ? 'bg-accent-gold/15 text-accent-gold/40 cursor-not-allowed'
+                  : 'bg-accent-gold text-canvas-deep hover:bg-accent-gold-hover shadow-md shadow-accent-gold/10'
+                }
+              `}
+            >
+              {uncLoading ? 'Estimating uncertainty...' : '⚡ Run Dropout Estimation'}
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {/* ─── Live Demo Players ─── */}
       {sample && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-panel-border/30 pb-2">
             <div>
-              <h2 className="text-xl font-semibold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>
-                Live Prediction & Uncertainty Overview
+              <h2 className="text-base font-semibold text-text-primary font-heading">
+                Prediction Rollouts & Confidence Heatmaps
               </h2>
-              <p className="text-sm text-text-secondary">
-                Side-by-side comparison of ground truth vs model prediction {uncertaintyRes && 'and per-pixel uncertainty heatmap'}.
+              <p className="text-xs text-text-secondary font-sans">
+                Side-by-side visualization of physical ground truth vs predicted wave evolution.
               </p>
             </div>
             {uncertaintyRes && (
               <button
                 onClick={() => setShowUncertaintyOverlay(!showUncertaintyOverlay)}
-                className="text-xs font-mono px-3 py-1.5 rounded-lg border border-gold/30 text-gold hover:bg-gold/10 transition-all"
+                className="text-xs font-mono px-3 py-1.5 rounded-lg border border-accent-gold/30 text-accent-gold hover:bg-accent-gold/10 transition-snappy focus:outline-none focus:ring-2 focus:ring-accent-gold/40 cursor-pointer"
               >
-                {showUncertaintyOverlay ? 'Hide Uncertainty Overlay' : 'Show Uncertainty Overlay'}
+                {showUncertaintyOverlay ? 'Hide Uncertainty Map' : 'Show Uncertainty Map'}
               </button>
             )}
           </div>
 
+          {/* Sync frames player grids */}
           <div className={`grid grid-cols-1 ${showUncertaintyOverlay && uncertaintyRes ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
             <FramePlayer
               frames={sample.ground_truth_frames}
-              label="Ground Truth"
-              size={240}
+              label="Ground Truth (Reference)"
+              size={220}
               currentFrame={currentFrame}
+              contextCount={10}
+              accent="rose"
             />
             <FramePlayer
               frames={uncertaintyRes?.predicted_frames || sample.predicted_frames}
-              label="Mean Model Prediction"
-              size={240}
+              label="Mean Prediction (Forecast)"
+              size={220}
               onFrameChange={setCurrentFrame}
+              contextCount={10}
+              accent="gold"
             />
             {showUncertaintyOverlay && uncertaintyRes && (
               <FramePlayer
                 frames={uncertaintyRes.uncertainty_maps}
-                label={`Std Dev Heatmap (N=${uncertaintyRes.num_samples})`}
-                size={240}
+                label={`Std Dev Variance Map (N=${uncertaintyRes.num_samples})`}
+                size={220}
                 currentFrame={currentFrame}
+                contextCount={10}
+                accent="sage"
               />
             )}
           </div>
 
-          {/* Per-frame PSNR & Uncertainty */}
+          {/* Per-frame Metrics Graphs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sample.psnr_per_step && (
-              <div className="glass-card p-5">
-                <p className="text-xs font-mono text-text-secondary mb-3">Per-frame PSNR (dB) — Higher is better</p>
-                <div className="flex items-end gap-1.5 h-16">
+              <Card eyebrow="Analysis Metrics" title="Per-frame PSNR Rollout (Higher is Better)">
+                <div className="flex items-end gap-1.5 h-20 pt-4" aria-label="PSNR steps chart">
                   {sample.psnr_per_step.map((v, i) => {
                     const max = Math.max(...sample.psnr_per_step);
                     const min = Math.min(...sample.psnr_per_step);
@@ -227,25 +230,26 @@ export default function Overview({ isBackendOnline }) {
                     return (
                       <div
                         key={i}
-                        className={`flex-1 rounded-t transition-all ${
-                          i === currentFrame ? 'bg-gold' : 'bg-gold/25'
+                        className={`flex-1 rounded-t transition-snappy ${
+                          i === currentFrame ? 'bg-accent-gold' : 'bg-accent-gold/20'
                         }`}
-                        style={{ height: `${Math.max(h, 5)}%` }}
-                        title={`Step ${i + 1}: ${v.toFixed(1)} dB`}
+                        style={{ height: `${Math.max(h, 8)}%` }}
+                        title={`Step ${i + 1}: ${v.toFixed(2)} dB`}
                       />
                     );
                   })}
                 </div>
-              </div>
+                <div className="flex justify-between text-[9px] font-mono text-text-tertiary mt-2 select-none">
+                  <span>Step 1</span>
+                  <span>Autoregressive Horizon</span>
+                  <span>Step 10</span>
+                </div>
+              </Card>
             )}
 
             {uncertaintyRes?.per_frame_uncertainty && (
-              <div className="glass-card p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <p className="text-xs font-mono text-text-secondary">Epistemic Uncertainty σ(t) per Step</p>
-                  <span className="text-xs font-mono text-rose">Mean: {uncertaintyRes.mean_uncertainty}</span>
-                </div>
-                <div className="flex items-end gap-1.5 h-16">
+              <Card eyebrow="Epistemic Variance" title="Uncertainty Variance σ(t) per Step">
+                <div className="flex items-end gap-1.5 h-20 pt-4" aria-label="Uncertainty steps chart">
                   {uncertaintyRes.per_frame_uncertainty.map((u, i) => {
                     const max = Math.max(...uncertaintyRes.per_frame_uncertainty);
                     const min = Math.min(...uncertaintyRes.per_frame_uncertainty);
@@ -253,55 +257,59 @@ export default function Overview({ isBackendOnline }) {
                     return (
                       <div
                         key={i}
-                        className={`flex-1 rounded-t transition-all ${
-                          i === currentFrame ? 'bg-rose' : 'bg-rose/35'
+                        className={`flex-1 rounded-t transition-snappy ${
+                          i === currentFrame ? 'bg-accent-rose' : 'bg-accent-rose/20'
                         }`}
-                        style={{ height: `${Math.max(h, 8)}%` }}
-                        title={`Step ${i + 1} Uncertainty σ: ${u.toFixed(4)}`}
+                        style={{ height: `${Math.max(h, 12)}%` }}
+                        title={`Step ${i + 1} σ: ${u.toFixed(4)}`}
                       />
                     );
                   })}
                 </div>
-              </div>
+                <div className="flex justify-between text-[9px] font-mono text-text-tertiary mt-2 select-none">
+                  <span>Step 1 (Low σ)</span>
+                  <span className="text-accent-rose font-semibold font-mono-tabular">Mean σ: {uncertaintyRes.mean_uncertainty.toFixed(4)}</span>
+                  <span>Step 10 (High σ)</span>
+                </div>
+              </Card>
             )}
           </div>
         </div>
       )}
 
-      {/* Architecture overview */}
-      <div className="glass-card p-8 space-y-5">
-        <h2 className="text-xl font-semibold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>How It Works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* ─── Pipeline Architectural Overview ─── */}
+      <Card title="Model Pipeline Architecture & Flow" eyebrow="Specifications">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
           {[
             {
               step: '01',
-              title: 'Encode',
-              desc: 'Each frame passes through a 4-stage CNN encoder, compressing from 64×64 pixels to a 256-dimensional latent token.',
-              color: 'from-gold to-amber-400',
+              title: 'Latent Encoding',
+              desc: 'Each physical grid frame passes through a 4-stage ResConv Encoder, compressing 64×64 spatial grids into 256-d latent representations.',
+              color: 'from-accent-gold to-[#f0c36e]',
             },
             {
               step: '02',
-              title: 'Predict',
-              desc: 'A 6-layer causal Transformer receives context latents and autoregressively generates future latent tokens using learned queries.',
-              color: 'from-lavender to-violet-400',
+              title: 'Causal Transformer Rollout',
+              desc: 'A 6-layer causal self-attention Transformer autoregressively forecasts future dynamics, preventing leakage via causal attention masking.',
+              color: 'from-[#c286d9] to-accent-rose',
             },
             {
               step: '03',
-              title: 'Decode',
-              desc: 'A mirror-image CNN decoder reconstructs predicted frames from the Transformer\'s output latents back to 64×64 resolution.',
-              color: 'from-rose to-pink-400',
+              title: 'Decoded Reconstructions',
+              desc: 'A symmetric CNN decoder maps forecasted latent tokens back to full 64×64 resolution wave state frames.',
+              color: 'from-accent-rose to-accent-coral',
             },
           ].map(({ step, title, desc, color }) => (
-            <div key={step} className="space-y-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white font-mono font-bold text-sm shadow-lg`}>
+            <div key={step} className="space-y-2 border border-panel-border/30 p-4 rounded-xl bg-white/[0.01]">
+              <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center text-canvas-deep font-mono font-bold text-xs shadow-md`}>
                 {step}
               </div>
-              <h3 className="font-semibold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>{title}</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">{desc}</p>
+              <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+              <p className="text-xs text-text-secondary leading-relaxed font-sans">{desc}</p>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

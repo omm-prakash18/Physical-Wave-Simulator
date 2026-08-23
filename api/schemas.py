@@ -46,6 +46,14 @@ class GenerateResponse(BaseModel):
     psnr_per_step: list[float]
     ssim_per_step: list[float]
     params: dict
+    energy_gt: list[float] | None = None
+    energy_pred: list[float] | None = None
+    psnr_persistence: list[float] | None = None
+    ssim_persistence: list[float] | None = None
+    energy_persistence: list[float] | None = None
+    psnr_linear: list[float] | None = None
+    ssim_linear: list[float] | None = None
+    energy_linear: list[float] | None = None
 
 
 class SampleSequence(BaseModel):
@@ -57,11 +65,29 @@ class SampleSequence(BaseModel):
     psnr_per_step: list[float]
     ssim_per_step: list[float]
     params: dict
+    energy_gt: list[float] | None = None
+    energy_pred: list[float] | None = None
+    psnr_persistence: list[float] | None = None
+    ssim_persistence: list[float] | None = None
+    energy_persistence: list[float] | None = None
+    psnr_linear: list[float] | None = None
+    ssim_linear: list[float] | None = None
+    energy_linear: list[float] | None = None
 
 
 class SamplesResponse(BaseModel):
     """Response from /api/samples."""
     samples: list[SampleSequence]
+
+
+class LatentProbeResponse(BaseModel):
+    """Response from /api/latent-probe."""
+    r2_center_x: float
+    r2_center_y: float
+    r2_width: float
+    r2_amplitude: float
+    num_samples: int
+
 
 
 class MetricsResponse(BaseModel):
@@ -70,7 +96,7 @@ class MetricsResponse(BaseModel):
     ssim_per_step: list[float]
     psnr_mean: float
     ssim_mean: float
-    loss_history: dict | None = None
+    loss_history: list[dict] | dict | None = None
     training_config: dict | None = None
     param_counts: dict | None = None
 

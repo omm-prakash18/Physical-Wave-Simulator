@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import NavRail from './NavRail';
+import StatusBar from './StatusBar';
 
 const navItems = [
   { path: '/', label: 'Overview', icon: '◎' },
@@ -11,104 +12,51 @@ const navItems = [
   { path: '/model', label: 'Model Card', icon: '⚙' },
 ];
 
+/**
+ * Main application Layout frame.
+ * Orchestrates NavRail, top workspace header, scrollable workspace canvas,
+ * responsive grids, Copilot side panel, and StatusBar.
+ */
 export default function Layout({ children, isBackendOnline }) {
   const [activeTab, setActiveTab] = useState('Pages');
   const [filterText, setFilterText] = useState('');
   const [zoom, setZoom] = useState(100);
 
-  const filteredNavItems = navItems.filter((item) =>
-    item.label.toLowerCase().includes(filterText.toLowerCase())
-  );
+  // Apply zoom factor inline style to content area
+  const zoomStyle = {
+    transform: `scale(${zoom / 100})`,
+    transformOrigin: 'top center',
+    width: `${10000 / zoom}%`, // adjust width to avoid scrollbar squishing
+  };
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-[#211512] font-sans text-text-primary">
-      {/* ─── NEW COLOR PALETTE AMBIENT GLOWS ─────────────────────── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-8%] left-[-8%] w-[550px] h-[550px] rounded-full bg-gradient-to-br from-[#E4A499]/12 to-transparent blur-[140px] animate-pulse" style={{ animationDuration: '9s' }} />
-        <div className="absolute bottom-[5%] right-[-8%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#718A9E]/18 to-transparent blur-[160px] animate-pulse" style={{ animationDuration: '13s' }} />
-        <div className="absolute top-[35%] left-[45%] w-[450px] h-[450px] rounded-full bg-gradient-to-bl from-[#BC7B6F]/12 to-transparent blur-[130px] animate-pulse" style={{ animationDuration: '11s' }} />
+    <div className="relative flex h-screen w-screen overflow-hidden bg-canvas-deep font-sans text-text-primary select-none">
+      {/* ─── Ambient Drifting Background Glow Mesh ─── */}
+      <div className="ambient-mesh" aria-hidden="true">
+        <div className="ambient-glow-1" />
+        <div className="ambient-glow-2" />
       </div>
 
-      {/* ─── LEFT SIDEBAR ─────────────────────────────────── */}
-      <aside className="w-60 border-r border-border-color bg-panel-bg flex flex-col justify-between shrink-0 glass-panel-left z-10">
-        <div className="p-4 space-y-4">
-          {/* macOS controls */}
-          <div className="flex items-center justify-between">
-            <div className="mac-dots">
-              <span className="mac-dot red" />
-              <span className="mac-dot yellow" />
-              <span className="mac-dot green" />
-            </div>
-            <span className="text-[10px] font-mono text-text-secondary tracking-wide">Wave Studio</span>
-          </div>
+      {/* ─── Persistent Left Navigation Rail ─── */}
+      <NavRail
+        navItems={navItems}
+        isBackendOnline={isBackendOnline}
+        filterText={filterText}
+        setFilterText={setFilterText}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
-          {/* Toggle Tab Switcher */}
-          <div className="bg-white/4 p-0.5 rounded-lg flex border border-white/4">
-            {['Pages', 'Components'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 text-center py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  activeTab === tab
-                    ? 'bg-gold/15 text-gold shadow-sm border border-gold/15'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Search/Filter */}
-          <input
-            type="text"
-            placeholder="Filter pages..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-full design-input"
-          />
-
-          {/* Page Links */}
-          <nav className="space-y-1">
-            {filteredNavItems.map(({ path, label, icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <span className="text-sm opacity-70">{icon}</span>
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-
-        {/* Guest profile footer */}
-        <div className="p-4 border-t border-border-color/50 bg-white/2 space-y-2">
-          <p className="text-[11px] text-text-secondary">
-            You're running as a <span className="text-gold font-semibold">guest</span>.
-          </p>
-          <div className="text-[10px] font-mono text-text-secondary/70 flex items-center justify-between">
-            <span>RTX 3050 • CUDA</span>
-            <div className="flex items-center gap-1.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-sage animate-pulse' : 'bg-rose'}`} />
-              <span className={isBackendOnline ? 'text-sage' : 'text-rose'}>
-                {isBackendOnline ? 'Live' : 'Offline'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* ─── MAIN WORKSPACE CONTENT ─────────────────────────── */}
+      {/* ─── Main Content Area ─── */}
       <div className="flex-1 flex flex-col min-w-0 z-10">
         {/* Top Header */}
-        <header className="h-12 border-b border-border-color bg-panel-bg px-6 flex items-center justify-between shrink-0 glass-panel-header">
+        <header
+          className="h-12 border-b border-panel-border bg-[#15141f]/75 px-6 flex items-center justify-between shrink-0 backdrop-blur-md"
+          role="banner"
+        >
           <div className="flex items-center gap-2.5">
-            <span className="text-xs text-text-secondary uppercase tracking-widest" style={{ fontFamily: 'var(--font-heading)' }}>Workspace</span>
-            <span className="text-xs font-semibold text-text-primary bg-white/5 px-3 py-1 rounded-md border border-gold/10 font-mono">
+            <span className="eyebrow-label text-text-secondary/70">Workspace</span>
+            <span className="text-[11px] font-semibold text-accent-gold bg-accent-gold/10 px-3 py-1 rounded border border-accent-gold/20 font-mono">
               wave-predictor-v2
             </span>
           </div>
@@ -118,86 +66,83 @@ export default function Layout({ children, isBackendOnline }) {
               href="http://localhost:8000/docs"
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-mono text-text-secondary hover:text-gold px-3 py-1.5 rounded-md hover:bg-gold/5 transition-all"
+              className="text-xs font-mono text-text-secondary hover:text-accent-gold transition-colors focus-visible:ring-2 focus-visible:ring-accent-gold/45 focus:outline-none px-2.5 py-1 rounded hover:bg-white/5"
             >
               API Docs
             </a>
-            <button className="bg-gold hover:bg-gold-hover text-[#1a1a2e] text-xs font-semibold px-4 py-1.5 rounded-lg transition-all active:scale-95 shadow-lg shadow-gold/15" style={{ fontFamily: 'var(--font-heading)' }}>
+            <button className="bg-accent-gold hover:bg-accent-gold-hover text-canvas-deep text-xs font-semibold px-4 py-1.5 rounded-lg active:scale-95 transition-snappy shadow-md shadow-accent-gold/10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-gold/40">
               Launch API
             </button>
           </div>
         </header>
 
-        {/* Scrollable Design Canvas */}
-        <div className="flex-1 overflow-auto design-canvas p-8 flex flex-col items-center justify-start">
-          <div className="w-full max-w-5xl space-y-6">
-            <div className="canvas-card p-6 min-h-[500px]">
-              {children}
-            </div>
+        {/* Scrollable Design Canvas Wrapper */}
+        <main className="flex-1 overflow-auto design-canvas p-6 flex flex-col items-center justify-start">
+          <div
+            className="w-full max-w-6xl space-y-6 transition-smooth"
+            style={zoomStyle}
+          >
+            {children}
           </div>
-        </div>
+        </main>
 
-        {/* Bottom Status Bar */}
-        <footer className="h-9 border-t border-border-color bg-panel-bg px-4 flex items-center justify-between text-xs font-mono text-text-secondary shrink-0 glass-panel-footer">
-          <div className="flex items-center gap-2">
-            <span className="text-sage">✓</span>
-            <span>Model loaded • 13.3M params</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span>PyTorch + CUDA</span>
-            <div className="flex items-center gap-2 border-l border-border-color pl-4">
-              <button onClick={() => setZoom(Math.max(50, zoom - 10))} className="hover:text-gold transition-colors">−</button>
-              <span>{zoom}%</span>
-              <button onClick={() => setZoom(Math.min(150, zoom + 10))} className="hover:text-gold transition-colors">+</button>
-            </div>
-          </div>
-        </footer>
+        {/* ─── Bottom Status Bar ─── */}
+        <StatusBar
+          isBackendOnline={isBackendOnline}
+          zoom={zoom}
+          setZoom={setZoom}
+          paramCount="13.3M"
+        />
       </div>
 
-      {/* ─── RIGHT COPILOT SIDEBAR ───────────────── */}
-      <aside className="w-72 border-l border-border-color bg-panel-bg flex flex-col justify-between shrink-0 hidden lg:flex glass-panel-right z-10">
+      {/* ─── Right Copilot Panel (Desktop only) ─── */}
+      <aside
+        className="w-72 border-l border-panel-border bg-[#15141f]/50 flex flex-col justify-between shrink-0 hidden lg:flex z-10 backdrop-blur-2xl"
+        aria-label="Copilot Panel"
+      >
         <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between pb-3 border-b border-border-color">
-            <span className="text-xs font-semibold text-text-primary" style={{ fontFamily: 'var(--font-heading)' }}>Copilot Panel</span>
-            <span className="text-[10px] font-mono bg-gold/10 text-gold px-2 py-0.5 rounded-md">
+          {/* Panel header */}
+          <div className="flex items-center justify-between pb-3 border-b border-panel-border/30">
+            <span className="text-xs font-semibold text-text-primary uppercase tracking-wider font-heading">Copilot Panel</span>
+            <span className="text-[10px] font-mono bg-accent-gold/10 text-accent-gold px-2 py-0.5 rounded border border-accent-gold/25">
               Active
             </span>
           </div>
 
-          {/* Model explanation */}
+          {/* Model info explanation */}
           <div className="space-y-4 text-xs">
-            <div className="p-3.5 bg-white/4 rounded-xl border border-gold/8 space-y-1.5">
-              <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wider">Model Info</span>
-              <p className="text-text-primary leading-relaxed">
-                Hybrid CNN-Transformer predicting future physical simulation states in a compressed 256-d latent space.
+            <div className="p-3.5 bg-panel-glass rounded-xl border border-panel-border space-y-1.5">
+              <span className="eyebrow-label">Model Pipeline</span>
+              <p className="text-text-secondary leading-relaxed font-sans">
+                Hybrid CNN-Transformer forecasting future physical propagation in a learned 256-d latent space.
               </p>
             </div>
 
-            {/* Simulated chat messages */}
+            {/* Chat notifications list */}
             <div className="space-y-3">
               {[
                 {
-                  sender: 'System',
-                  text: 'Training data normalized to [-1, 1] range. Decoder uses Tanh activation. Energy conservation verified.',
+                  sender: 'System Node',
+                  text: 'Training normalized to [-1, 1]. Decoder using Tanh layer. Energy conservation checked.',
                   time: 'Active',
                 },
                 {
                   sender: 'Copilot',
-                  text: 'Encoder-Decoder architecture prevents error compounding. Cross-attention maps predicted steps to context stages.',
+                  text: 'Encoder-Decoder avoids error propagation. Cross-attention maps predictions to initial inputs.',
                   time: '1m ago',
                 },
                 {
-                  sender: 'Physics Engine',
-                  text: 'CFL condition: courant=0.70. Wave speed=1.0. Boundary conditions: Neumann reflecting.',
+                  sender: 'Physics solver',
+                  text: 'CFL threshold check: courant=0.70. Wave speed=1.0. Boundary mode: Neumann reflecting.',
                   time: 'Just now',
                 },
               ].map((msg, i) => (
                 <div key={i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                     <span className="font-semibold text-text-primary text-[11px]" style={{ fontFamily: 'var(--font-heading)' }}>{msg.sender}</span>
-                     <span className="text-[9px] text-text-secondary/60">{msg.time}</span>
+                     <span className="font-semibold text-text-primary text-[11px] font-heading">{msg.sender}</span>
+                     <span className="text-[9px] text-text-secondary/50 font-mono">{msg.time}</span>
                   </div>
-                  <p className="text-text-secondary leading-relaxed bg-white/3 p-2.5 rounded-lg border border-gold/6">
+                  <p className="text-text-secondary leading-relaxed bg-panel-glass p-2.5 rounded-lg border border-panel-border/40 font-sans">
                     {msg.text}
                   </p>
                 </div>
@@ -206,12 +151,12 @@ export default function Layout({ children, isBackendOnline }) {
           </div>
         </div>
 
-        {/* Bottom helper */}
-        <div className="p-4 border-t border-border-color/50 bg-white/2 flex items-center justify-between text-xs font-mono text-text-secondary/70">
-          <span>TensorBoard Logs</span>
+        {/* Copilot Footer */}
+        <div className="p-4 border-t border-panel-border/30 bg-white/[0.01] flex items-center justify-between text-xs font-mono text-text-secondary/50">
+          <span>TensorBoard logs</span>
           <div className="flex gap-2.5">
-            <span className="cursor-help hover:text-gold transition-colors" title="Keyboard Shortcuts">⌨</span>
-            <span className="cursor-help hover:text-gold transition-colors" title="Settings">⚙</span>
+            <span className="cursor-help hover:text-accent-gold transition-colors" title="Keyboard Shortcuts">⌨</span>
+            <span className="cursor-help hover:text-accent-gold transition-colors" title="Settings">⚙</span>
           </div>
         </div>
       </aside>

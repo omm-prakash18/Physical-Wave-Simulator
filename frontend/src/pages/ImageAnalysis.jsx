@@ -1,10 +1,12 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import FramePlayer from '../components/FramePlayer';
+import Card from '../components/Card';
+import MetricStat from '../components/MetricStat';
 import { Sparkline } from '../components/MetricChart';
 import { uploadAndAnalyzeImage } from '../api/client';
 import demoFallback from '../data/demo_fallback.json';
 
-// Helper to generate canvas preset images
+// Helper to generate canvas preset images for client demonstration
 function createPresetDataUrl(presetType) {
   const canvas = document.createElement('canvas');
   canvas.width = 128;
@@ -46,7 +48,7 @@ function createPresetDataUrl(presetType) {
   return canvas.toDataURL('image/png');
 }
 
-// Convert data URL to Blob/File
+// Convert data URL to Blob/File helper
 function dataURLtoFile(dataurl, filename) {
   const arr = dataurl.split(',');
   const mime = arr[0].match(/:(.*?);/)[1];
@@ -59,6 +61,11 @@ function dataURLtoFile(dataurl, filename) {
   return new File([u8arr], filename, { type: mime });
 }
 
+/**
+ * Image Upload & Latent Wave Prediction page.
+ * Compresses an uploaded image or preset into a latent token, 
+ * details the 3-stage pipeline steps, and predicts future wave timelines.
+ */
 export default function ImageAnalysis({ isBackendOnline }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -149,7 +156,7 @@ export default function ImageAnalysis({ isBackendOnline }) {
           spatial_spectrum: [0.1, 0.3, 0.7, 0.9, 0.8, 0.6, 0.4, 0.25, 0.15, 0.1, 0.05, 0.03, 0.02, 0.01, 0.0, 0.0],
         });
         setLoading(false);
-      }, 500);
+      }, 700);
       return;
     }
 
@@ -194,43 +201,74 @@ export default function ImageAnalysis({ isBackendOnline }) {
 
   const { min: lMin, max: lMax } = getLatentMinMax();
 
+  // Colorblind-safe diverging Blue -> Neutral -> Gold scale for self-attention preview
+  const getCausalAttentionHeatColor = (value) => {
+    const v = Math.min(Math.max(value, 0), 1);
+    let r, g, b;
+    if (v < 0.5) {
+      const t = v * 2;
+      r = Math.round(35 + t * (107 - 35));
+      g = Math.round(52 + t * (101 - 52));
+      b = Math.round(85 + t * (88 - 85));
+    } else {
+      const t = (v - 0.5) * 2;
+      r = Math.round(107 + t * (212 - 107));
+      g = Math.round(101 + t * (168 - 101));
+      b = Math.round(88 + t * (83 - 88));
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
   return (
-    <div className="animate-fade-in space-y-8">
-      {/* Header */}
+    <div className="animate-fade-in space-y-6">
+      {/* Page Title */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-2">
-          Image Upload & Latent Wave Prediction
+        <h1 className="text-2xl font-bold font-heading text-text-primary mb-1">
+          Diagnostics & Wave Analysis (OOD Study)
         </h1>
-        <p className="text-sm text-text-secondary max-w-3xl leading-relaxed">
-          Upload any picture or wave snapshot. The hybrid CNN-Transformer model <span className="text-gold font-semibold">compresses physical simulation frames into a learned latent space</span>, then <span className="text-rose font-semibold">forecasts future dynamics using causal attention</span>.
+        <p className="text-xs text-text-secondary font-sans leading-relaxed">
+          Upload physical wave snapshots, extract latent space embeddings, and analyze the causal prediction pipeline.
         </p>
       </div>
 
-      {/* Upload & Controls Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Drag & Drop Dropzone */}
-        <div className="md:col-span-2 glass-card p-6 flex flex-col justify-between">
-          <h2 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <span>📷</span> Upload Simulation Picture
-          </h2>
+      {/* Out-Of-Distribution Warning Banner */}
+      <div className="rounded-xl border border-accent-coral/25 bg-accent-coral/5 p-4 flex gap-3 text-xs select-none">
+        <span className="text-accent-coral text-lg shrink-0">⚠️</span>
+        <div className="space-y-1 text-left">
+          <p className="font-semibold text-accent-coral font-heading">
+            Out-of-Distribution (OOD) Generalization Warning
+          </p>
+          <p className="text-text-secondary leading-relaxed font-sans prose-panel">
+            This simulator is trained purely on Gaussian pulse propagation. Uploading natural shapes, complex waveforms, or non-boundary photos is out-of-distribution. The latent mapping will execute, but predictions will decay into non-physical noise. Use this page to study convolutional boundary generalization failures.
+          </p>
+        </div>
+      </div>
 
+      {/* Upload and presets grids */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Dropzone Card */}
+        <Card className="md:col-span-2 flex flex-col justify-between" title="Upload Simulation Snapshot" eyebrow="Input snapshot">
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[190px] ${
-              dragActive
-                ? 'border-gold bg-gold/10 shadow-lg shadow-gold/10'
+            className={`
+              border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-snappy flex flex-col items-center justify-center min-h-[170px] select-none
+              ${dragActive
+                ? 'border-accent-gold bg-accent-gold/5 shadow-md shadow-accent-gold/10'
                 : previewUrl
-                ? 'border-gold/40 bg-white/2 hover:border-gold/80'
-                : 'border-white/15 hover:border-gold/50 bg-white/2'
-            }`}
+                ? 'border-accent-gold/30 bg-white/[0.01] hover:border-accent-gold/60'
+                : 'border-panel-border/30 hover:border-accent-gold/40 bg-white/[0.01]'
+              }
+            `}
           >
             <input
               type="file"
               ref={fileInputRef}
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+              aria-label="Upload simulation frame image"
               accept="image/*"
               className="hidden"
             />
@@ -239,136 +277,128 @@ export default function ImageAnalysis({ isBackendOnline }) {
               <div className="flex flex-col items-center gap-3">
                 <img
                   src={previewUrl}
-                  alt="Uploaded Preview"
-                  className="w-28 h-28 object-cover rounded-lg border border-gold/40 shadow-md"
+                  alt="Snapshot upload preview"
+                  className="w-24 h-24 object-cover rounded-lg border border-accent-gold/30 shadow-md bg-[#15141f]"
                 />
-                <span className="text-xs text-gold font-mono truncate max-w-[220px]">
-                  {selectedFile ? selectedFile.name : 'Selected Image'}
+                <span className="text-xs text-accent-gold font-mono font-medium truncate max-w-[240px]">
+                  {selectedFile ? selectedFile.name : 'preset_snapshot.png'}
                 </span>
-                <span className="text-[11px] text-text-secondary">Click or drag a new picture to replace</span>
+                <span className="text-[10px] text-text-secondary/70">Click or drag a new image to replace</span>
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="w-12 h-12 rounded-full bg-gold/10 border border-gold/20 text-gold flex items-center justify-center text-xl mx-auto">
+                <div className="w-10 h-10 rounded-lg bg-accent-gold/10 border border-accent-gold/25 text-accent-gold flex items-center justify-center text-lg mx-auto">
                   📤
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Drag & drop your picture here</p>
-                  <p className="text-xs text-text-secondary mt-1">Supports PNG, JPG, WebP, GIF files</p>
+                  <p className="text-xs font-semibold text-text-primary">Drag & drop your wave snapshot here</p>
+                  <p className="text-[10px] text-text-secondary mt-0.5">Supports PNG, JPG, WebP format</p>
                 </div>
               </div>
             )}
           </div>
 
-          {error && <p className="text-xs text-rose mt-3 text-center">{error}</p>}
+          {error && <p className="text-xs text-accent-coral mt-3 text-center font-mono">{error}</p>}
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center border-t border-panel-border/20 pt-4">
             <button
               onClick={handleAnalyze}
               disabled={loading || !selectedFile}
-              className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all w-full md:w-auto ${
-                loading || !selectedFile
-                  ? 'bg-white/10 text-text-secondary/40 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-gold to-rose text-[#1E1815] hover:shadow-lg hover:shadow-gold/20 hover:scale-[1.02] active:scale-[0.98]'
-              }`}
+              className={`
+                px-8 py-2.5 rounded-lg font-semibold text-xs transition-snappy w-full md:w-auto cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-gold/45
+                ${loading || !selectedFile
+                  ? 'bg-white/5 text-text-secondary/30 cursor-not-allowed border border-panel-border'
+                  : 'bg-gradient-to-r from-accent-gold to-accent-rose text-canvas-deep hover:shadow-glow-gold hover:scale-[1.02] active:scale-[0.98]'
+                }
+              `}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[#1E1815]/40 border-t-[#1E1815] rounded-full animate-spin" />
-                  Compressing Frame & Forecasting...
+                  <span className="w-3.5 h-3.5 border-2 border-canvas-deep/40 border-t-canvas-deep rounded-full animate-spin" />
+                  Running analysis...
                 </span>
               ) : (
-                '⚡ Compress Frame & Forecast Dynamics'
+                '⚡ Process Snapshot & Forecast'
               )}
             </button>
           </div>
-        </div>
+        </Card>
 
-        {/* Preset Sample Selector */}
-        <div className="glass-card p-6 flex flex-col justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
-              <span>🌊</span> Or Try Preset Waves
-            </h2>
-            <p className="text-xs text-text-secondary mb-4">Click a preset below to instantly load a test wave picture.</p>
-            <div className="space-y-3">
-              {presets.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => handlePresetSelect(p.id)}
-                  className="w-full text-left p-3 rounded-xl bg-white/4 border border-white/6 hover:border-gold/40 hover:bg-gold/5 transition-all text-xs flex justify-between items-center group"
-                >
-                  <div>
-                    <p className="font-semibold text-text-primary group-hover:text-gold">{p.name}</p>
-                    <p className="text-[10px] text-text-secondary">{p.desc}</p>
-                  </div>
-                  <span className="text-gold/50 group-hover:text-gold font-mono">→</span>
-                </button>
-              ))}
-            </div>
+        {/* Preset Selector Card */}
+        <Card title="Or load wave presets" eyebrow="Preset triggers">
+          <p className="text-xs text-text-secondary mb-4 font-sans leading-relaxed">
+            Click on a physical preset scenario below to load pre-calculated snapshot configurations:
+          </p>
+          <div className="space-y-2.5 select-none">
+            {presets.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handlePresetSelect(p.id)}
+                className="w-full text-left p-3 rounded-xl bg-white/[0.02] border border-panel-border/20 hover:border-accent-gold/45 hover:bg-accent-gold/[0.03] transition-snappy text-xs flex justify-between items-center group cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-gold/30"
+              >
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-text-primary group-hover:text-accent-gold">{p.name}</p>
+                  <p className="text-[9px] text-text-secondary">{p.desc}</p>
+                </div>
+                <span className="text-accent-gold/40 group-hover:text-accent-gold font-mono transition-transform group-hover:translate-x-1">→</span>
+              </button>
+            ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-white/6 text-[10px] text-text-secondary text-center">
-            {isBackendOnline ? (
-              <span className="text-sage">✓ Live PyTorch Hybrid Model Active</span>
-            ) : (
-              <span className="text-gold">⚡ Client Simulation Engine Active</span>
-            )}
-          </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Analysis & Architecture Breakdown View */}
+      {/* Analysis Reports & Multi-stage pipelines */}
       {result && (
         <div className="space-y-6">
-          {/* Estimated Physics Metric Badges */}
+          {/* Estimated parameter metrics */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="glass-card p-4 text-center">
-              <span className="text-[10px] text-text-secondary uppercase tracking-wider block">Pulse Center X</span>
-              <span className="text-lg font-bold font-mono text-gold">{result.estimated_params.center_x}</span>
-            </div>
-            <div className="glass-card p-4 text-center">
-              <span className="text-[10px] text-text-secondary uppercase tracking-wider block">Pulse Center Y</span>
-              <span className="text-lg font-bold font-mono text-gold">{result.estimated_params.center_y}</span>
-            </div>
-            <div className="glass-card p-4 text-center">
-              <span className="text-[10px] text-text-secondary uppercase tracking-wider block">Amplitude</span>
-              <span className="text-lg font-bold font-mono text-sage">{result.estimated_params.amplitude}</span>
-            </div>
-            <div className="glass-card p-4 text-center">
-              <span className="text-[10px] text-text-secondary uppercase tracking-wider block">Pulse Width</span>
-              <span className="text-lg font-bold font-mono text-rose">{result.estimated_params.width}</span>
-            </div>
-            <div className="glass-card p-4 text-center col-span-2 md:col-span-1">
-              <span className="text-[10px] text-text-secondary uppercase tracking-wider block">Latent L2 Norm</span>
-              <span className="text-lg font-bold font-mono text-text-primary">{result.latent_norm}</span>
-            </div>
+            <MetricStat
+              label="Pulse Center X"
+              value={result.estimated_params.center_x?.toFixed(2)}
+              accent="gold"
+            />
+            <MetricStat
+              label="Pulse Center Y"
+              value={result.estimated_params.center_y?.toFixed(2)}
+              accent="gold"
+            />
+            <MetricStat
+              label="Wave Amplitude"
+              value={result.estimated_params.amplitude?.toFixed(2)}
+              accent="sage"
+            />
+            <MetricStat
+              label="Pulse Width (σ)"
+              value={result.estimated_params.width?.toFixed(1)}
+              accent="rose"
+            />
+            <MetricStat
+              label="Latent L2 Norm"
+              value={result.latent_norm?.toFixed(4)}
+              accent="primary"
+            />
           </div>
 
-          {/* Interactive 3-Stage Model Pipeline Visualization */}
-          <div className="glass-card p-6 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          {/* 3-Stage Model pipeline Card */}
+          <Card title="Causal Model Pipeline Diagnostic" eyebrow="ML Engine stages">
+            {/* Stage Selector */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-panel-border/30 pb-4 select-none">
               <div>
-                <h3 className="text-lg font-bold text-text-primary">
-                  How the Model Predicts Future Dynamics
-                </h3>
-                <p className="text-xs text-text-secondary mt-1">
-                  Step-by-step breakdown of spatial frame compression, latent causality, and future frame reconstruction.
-                </p>
+                <h3 className="text-sm font-semibold text-text-primary font-heading">Interactive Pipeline Graph</h3>
+                <p className="text-[11px] text-text-secondary">Navigate encoder-transformer-decoder blocks below.</p>
               </div>
-
-              {/* Stage Switcher */}
-              <div className="flex bg-black/30 p-1 rounded-xl border border-white/10">
+              <div className="flex bg-white/5 p-0.5 rounded-lg border border-panel-border font-sans">
                 {[
                   { stage: 1, label: '1. CNN Encoder' },
-                  { stage: 2, label: '2. Causal Transformer' },
+                  { stage: 2, label: '2. Latent Transformer' },
                   { stage: 3, label: '3. CNN Decoder' },
                 ].map(({ stage, label }) => (
                   <button
                     key={stage}
                     onClick={() => setActiveStage(stage)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-snappy cursor-pointer ${
                       activeStage === stage
-                        ? 'bg-gradient-to-r from-gold to-rose text-[#1E1815] shadow-md'
+                        ? 'bg-accent-gold text-canvas-deep shadow-md'
                         : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
@@ -378,189 +408,182 @@ export default function ImageAnalysis({ isBackendOnline }) {
               </div>
             </div>
 
-            {/* Stage 1: CNN Encoder */}
-            {activeStage === 1 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center animate-fade-in">
-                <div className="space-y-3">
-                  <div className="inline-block px-2.5 py-1 rounded-md bg-gold/15 text-gold font-mono text-xs font-bold">
-                    Stage 1: Frame Compression
-                  </div>
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    Spatial Frame → Learned Latent Token
-                  </h4>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    The 4-stage ResConv CNN Encoder downsamples your input picture from <span className="text-gold font-mono font-semibold">64×64 pixels (4096 values)</span> into a compact <span className="text-rose font-mono font-semibold">256-dimensional latent token z<sub>t</sub></span>.
-                  </p>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
-                    <p>• Input Shape: (1, 64, 64)</p>
-                    <p>• Compression: 16× Dimensionality Reduction</p>
-                    <p>• Output Latent Token: (256,)</p>
-                  </div>
-                </div>
-
-                {/* Visualizer: Input Image to 64x64 Tensor */}
-                <div className="flex items-center justify-center gap-4 bg-black/30 p-4 rounded-xl border border-white/6">
-                  <div className="text-center space-y-1">
-                    <p className="text-[11px] text-text-secondary">Uploaded Picture</p>
-                    <img
-                      src={previewUrl}
-                      alt="Input"
-                      className="w-24 h-24 object-cover rounded-lg border border-white/10"
-                    />
-                  </div>
-                  <div className="text-gold font-mono text-lg">→</div>
-                  <div className="text-center space-y-1">
-                    <p className="text-[11px] text-text-secondary">64×64 Normalized Tensor</p>
-                    <img
-                      src={`data:image/png;base64,${result.processed_frame}`}
-                      alt="Tensor"
-                      className="w-24 h-24 object-cover rounded-lg border border-gold/40 shadow-inner"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  </div>
-                </div>
-
-                {/* 256-Dim Latent Barcode */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-text-primary">Learned Latent Vector z<sub>t</sub> (256-Dim)</p>
-                  <div className="h-24 flex items-center gap-[1px] overflow-hidden rounded-lg bg-black/50 p-2 border border-white/10">
-                    {result.latent_vector.map((val, idx) => {
-                      const normVal = Math.max(0, Math.min(1, (val - lMin) / (lMax - lMin)));
-                      return (
-                        <div
-                          key={idx}
-                          className="flex-1 h-full rounded-[0.5px] transition-all"
-                          style={{
-                            backgroundColor: `hsl(${220 - normVal * 170}, 85%, ${30 + normVal * 55}%)`,
-                            opacity: 0.45 + normVal * 0.55,
-                          }}
-                          title={`Dim ${idx}: ${val}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex justify-between text-[10px] font-mono text-text-secondary">
-                    <span>Token Dim 0</span>
-                    <span>Latent Feature Embedding</span>
-                    <span>Token Dim 255</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Stage 2: Causal Latent Transformer */}
-            {activeStage === 2 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center animate-fade-in">
-                <div className="space-y-3">
-                  <div className="inline-block px-2.5 py-1 rounded-md bg-rose/15 text-rose font-mono text-xs font-bold">
-                    Stage 2: Causal Dynamics Forecasting
-                  </div>
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    Multi-Head Causal Attention Over Latents
-                  </h4>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    The 6-layer Causal Transformer receives context latent tokens <span className="font-mono text-gold">[z₁ ... z₁₀]</span> and auto-regressively predicts future latent tokens <span className="font-mono text-rose">[z₁₁ ... z₂₀]</span> using masked multi-head causal attention.
-                  </p>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
-                    <p>• Architecture: 6 Layers, 8 Attention Heads</p>
-                    <p>• Causal Masking: Prevents future token leakage</p>
-                    <p>• Auto-regression: Token z<sub>t+1</sub> generated step by step</p>
-                  </div>
-                </div>
-
-                {/* Interactive Causal Attention Heatmap Matrix */}
-                <div className="bg-black/30 p-4 rounded-xl border border-white/6 space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-text-primary">Causal Self-Attention Matrix (10 × 10)</span>
-                    <span className="font-mono text-rose text-[10px]">Causal Mask Applied</span>
-                  </div>
-                  <div className="grid grid-cols-10 gap-1 bg-black/60 p-3 rounded-lg border border-white/10">
-                    {Array.from({ length: 100 }).map((_, idx) => {
-                      const row = Math.floor(idx / 10);
-                      const col = idx % 10;
-                      const isMasked = col > row;
-                      const weight = isMasked ? 0 : Math.exp(-Math.abs(row - col) / 2.5);
-                      return (
-                        <div
-                          key={idx}
-                          className="aspect-square rounded-[2px] transition-all"
-                          style={{
-                            backgroundColor: isMasked
-                              ? 'rgba(255, 255, 255, 0.02)'
-                              : `hsl(${25 + weight * 30}, 85%, ${30 + weight * 50}%)`,
-                            opacity: isMasked ? 0.15 : 0.4 + weight * 0.6,
-                          }}
-                          title={isMasked ? 'Masked (Future)' : `Attention Step ${row} → ${col}: ${(weight * 100).toFixed(0)}%`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex justify-between text-[10px] font-mono text-text-secondary">
-                    <span>Context Steps (0..9)</span>
-                    <span>Attention Field</span>
-                    <span>Predicted Steps (10..19)</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Stage 3: CNN Decoder */}
-            {activeStage === 3 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center animate-fade-in">
-                <div className="space-y-3">
-                  <div className="inline-block px-2.5 py-1 rounded-md bg-sage/15 text-sage font-mono text-xs font-bold">
-                    Stage 3: Frame Reconstruction
-                  </div>
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    Latent Tokens → 2D Wave Sequence Rollout
-                  </h4>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    Each predicted latent token z<sub>t+k</sub> is passed through the 4-stage ResConv CNN Decoder, decompressing back into a full 64×64 reconstructed 2D wave frame.
-                  </p>
-                  <div className="bg-black/30 p-3 rounded-lg border border-white/6 text-[11px] font-mono text-text-secondary space-y-1">
-                    <p>• Output Horizon: 10 Predicted Frames</p>
-                    <p>• Spatial Resolution: 64×64 per frame</p>
-                    <p>• Output Range: Normalized [-1.0, 1.0]</p>
-                  </div>
-                </div>
-
-                {/* Animated Frame Player */}
-                <div className="flex justify-center">
-                  {result.predicted_frames && result.predicted_frames.length > 0 ? (
-                    <FramePlayer
-                      frames={result.predicted_frames}
-                      label="Predicted Future Wave Sequence"
-                      size={250}
-                      currentFrame={currentFrame}
-                      onFrameChange={setCurrentFrame}
-                    />
-                  ) : (
-                    <div className="w-60 h-60 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-text-secondary text-xs">
-                      No frame data available
+            {/* Stage Contents */}
+            <div className="pt-4">
+              
+              {/* Stage 1: CNN Encoder */}
+              {activeStage === 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center animate-fade-in text-left">
+                  <div className="space-y-3">
+                    <span className="eyebrow-label text-accent-gold">Stage 1: Spatial Compression</span>
+                    <h4 className="text-sm font-semibold text-text-primary">Snapshot to Latent Mapping</h4>
+                    <p className="text-xs text-text-secondary leading-relaxed font-sans prose-panel">
+                      The CNN Encoder extracts spatial wave features, maps high-dimensional 64×64 pixels (4096 dimensions) into a single 256-dimensional vector token z<sub>t</sub>.
+                    </p>
+                    <div className="bg-[#15141f]/75 p-3 rounded-lg border border-panel-border/30 text-[10px] font-mono text-text-secondary space-y-1 select-text font-mono-tabular">
+                      <p>• Input grid dimension: 64 × 64 (grayscale)</p>
+                      <p>• Projection target size: 256 embedding dimensions</p>
+                      <p>• Compression factor: 16.0× reduction</p>
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+                  </div>
 
-          {/* Spatial Energy Radial Profile Chart */}
-          <div className="glass-card p-6 space-y-3">
-            <h3 className="text-sm font-semibold text-text-primary">
-              Spatial Radial Wave Intensity Spectrum
-            </h3>
-            <Sparkline
-              data={result.spatial_spectrum}
-              color="#7A9A95"
-              height={70}
-              label="Mean Intensity vs Radial Distance from Estimated Peak Center"
-            />
-            <div className="flex justify-between text-[10px] font-mono text-text-secondary">
-              <span>Wave Center (r=0)</span>
-              <span>Radial Radius (pixels)</span>
-              <span>Domain Boundary (r=45)</span>
+                  {/* Images Comparison */}
+                  <div className="flex items-center justify-center gap-4 bg-[#15141f]/50 p-4 rounded-xl border border-panel-border/30 select-none">
+                    <div className="text-center space-y-1">
+                      <p className="text-[9px] text-text-secondary">Input file</p>
+                      <img
+                        src={previewUrl}
+                        alt="Original Upload"
+                        className="w-20 h-20 object-cover rounded border border-panel-border bg-[#15141f]"
+                      />
+                    </div>
+                    <span className="text-accent-gold font-mono font-bold">→</span>
+                    <div className="text-center space-y-1">
+                      <p className="text-[9px] text-text-secondary">64×64 normalized</p>
+                      <img
+                        src={`data:image/png;base64,${result.processed_frame}`}
+                        alt="Processed Tensor"
+                        className="w-20 h-20 object-cover rounded border border-accent-gold/40 bg-[#15141f]"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 256-d Latent barcode */}
+                  <div className="space-y-2 select-none">
+                    <p className="text-[11px] font-semibold text-text-primary font-mono">Embedding z<sub>t</sub> (256 dimensions)</p>
+                    <div className="h-16 flex items-center gap-[1px] overflow-hidden rounded bg-black/45 p-2 border border-panel-border/30">
+                      {result.latent_vector.map((val, idx) => {
+                        const normVal = Math.max(0, Math.min(1, (val - lMin) / (lMax - lMin)));
+                        return (
+                          <div
+                            key={idx}
+                            className="flex-1 h-full rounded-[0.5px]"
+                            style={{
+                              backgroundColor: `hsl(${210 - normVal * 150}, 80%, ${35 + normVal * 45}%)`,
+                              opacity: 0.5 + normVal * 0.5,
+                            }}
+                            title={`Feature ${idx}: ${val.toFixed(4)}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between text-[9px] font-mono text-text-tertiary">
+                      <span>Dim 0</span>
+                      <span>Latent representation mapping</span>
+                      <span>Dim 255</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 2: Transformer forecasting */}
+              {activeStage === 2 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center animate-fade-in text-left">
+                  <div className="space-y-3">
+                    <span className="eyebrow-label text-accent-rose">Stage 2: Causal Propagation</span>
+                    <h4 className="text-sm font-semibold text-text-primary">Masked Causal Attention Mechanism</h4>
+                    <p className="text-xs text-text-secondary leading-relaxed font-sans prose-panel">
+                      The transformer blocks consume context latents [z<sub>1</sub>...z<sub>10</sub>] and causal attention masks to project predicted latents [z<sub>11</sub>...z<sub>20</sub>] autoregressively.
+                    </p>
+                    <div className="bg-[#15141f]/75 p-3 rounded-lg border border-panel-border/30 text-[10px] font-mono text-text-secondary space-y-1 select-text font-mono-tabular">
+                      <p>• Attention Heads: 8 multi-head blocks</p>
+                      <p>• Mask type: causal autoregressive upper mask</p>
+                      <p>• Rollout horizon: 10 predicted temporal offsets</p>
+                    </div>
+                  </div>
+
+                  {/* Masked Attention Matrix visualizer */}
+                  <div className="bg-[#15141f]/60 p-4 rounded-xl border border-panel-border/30 space-y-3 select-none">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="font-semibold text-text-primary">10×10 Causal Mask matrix</span>
+                      <span className="text-accent-rose">Causal masked applied</span>
+                    </div>
+                    <div className="grid grid-cols-10 gap-0.5 bg-black/45 p-2 rounded-lg border border-panel-border/20">
+                      {Array.from({ length: 100 }).map((_, idx) => {
+                        const row = Math.floor(idx / 10);
+                        const col = idx % 10;
+                        const isMasked = col > row;
+                        const weight = isMasked ? 0 : Math.exp(-Math.abs(row - col) / 2.0);
+                        const cellColor = isMasked ? 'rgba(255,255,255,0.01)' : getCausalAttentionHeatColor(weight);
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className="aspect-square rounded-[1px] transition-all"
+                            style={{
+                              backgroundColor: cellColor,
+                              opacity: isMasked ? 0.1 : 0.45 + weight * 0.55,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between text-[8px] font-mono text-text-tertiary">
+                      <span>t = 1 (Context)</span>
+                      <span>Masked Upper Triangle</span>
+                      <span>t = 10 (Horizon)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 3: CNN Decoder Reconstructions */}
+              {activeStage === 3 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center animate-fade-in text-left">
+                  <div className="space-y-3">
+                    <span className="eyebrow-label text-accent-sage">Stage 3: Reconstruction</span>
+                    <h4 className="text-sm font-semibold text-text-primary">Latent decoder mapping</h4>
+                    <p className="text-xs text-text-secondary leading-relaxed font-sans prose-panel">
+                      Reconstructs high-dimensional 64×64 simulated frames from future latent tokens z<sub>t+k</sub> using a symmetric decoder model.
+                    </p>
+                    <div className="bg-[#15141f]/75 p-3 rounded-lg border border-panel-border/30 text-[10px] font-mono text-text-secondary space-y-1 select-text font-mono-tabular">
+                      <p>• Decoder layout: 4 ConvTranspose blocks</p>
+                      <p>• Output range: Tanh projected [-1.0, 1.0]</p>
+                      <p>• Rollout steps: 10 future simulation predictions</p>
+                    </div>
+                  </div>
+
+                  {/* predicted frame player */}
+                  <div className="flex justify-center select-none">
+                    {result.predicted_frames && result.predicted_frames.length > 0 ? (
+                      <FramePlayer
+                        frames={result.predicted_frames}
+                        label="Forecasted future snapshots sequence"
+                        size={210}
+                        currentFrame={currentFrame}
+                        onFrameChange={setCurrentFrame}
+                        contextCount={0} // All are predictions
+                        accent="gold"
+                      />
+                    ) : (
+                      <div className="w-56 h-56 rounded-xl bg-black/45 border border-panel-border/30 flex items-center justify-center text-text-secondary/40 text-xs">
+                        No frame outputs available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
-          </div>
+          </Card>
+
+          {/* Spatial energy radial profiles sparkline */}
+          <Card eyebrow="Analysis" title="Wave Radial Energy Profile Index">
+            <div className="pt-2 select-none">
+              <Sparkline
+                data={result.spatial_spectrum}
+                color="var(--color-accent-sage)"
+                height={60}
+              />
+            </div>
+            <div className="flex justify-between text-[9px] font-mono text-text-tertiary mt-2 select-none">
+              <span>Wave peak origin (r = 0)</span>
+              <span>Radial distance spectrum (pixels)</span>
+              <span>Domain reflecting border (r = 45)</span>
+            </div>
+          </Card>
+
         </div>
       )}
     </div>

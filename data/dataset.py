@@ -81,6 +81,9 @@ class WaveDataset(Dataset):
             if np.random.random() > 0.5:
                 context = context[:, :, :, ::-1].copy()  # horizontal flip
                 target = target[:, :, :, ::-1].copy()
+            if np.random.random() > 0.5:
+                context = context.swapaxes(2, 3).copy()  # transpose (90-deg rotation)
+                target = target.swapaxes(2, 3).copy()
 
         context = torch.from_numpy(context).float()
         target = torch.from_numpy(target).float()

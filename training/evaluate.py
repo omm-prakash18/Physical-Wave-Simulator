@@ -75,14 +75,49 @@ def evaluate_sequence(
     }
 
 
+def compute_wave_energy_physical(
+    frames: np.ndarray,
+    c: float = 1.0,
+    dt: float = 0.1,
+) -> np.ndarray:
+    """
+    Compute actual physical wave energy functional (kinetic + potential energy).
+    Formula: E = 0.5 * sum(v^2 + c^2 * (grad u)^2) * dx^2
+    """
+    T, C, H, W = frames.shape
+    dx = 1.0 / H
+
+    # Compute temporal velocity v = du/dt.
+    # At t=0, we assume velocity v=0 (zero initial velocity initialization).
+    vel = np.zeros_like(frames)
+    vel[1:] = (frames[1:] - frames[:-1]) / dt
+
+    energies = []
+    for t in range(T):
+        u = frames[t, 0]  # (H, W)
+        v = vel[t, 0]  # (H, W)
+
+        # Spatial gradients via central differences
+        gy, gx = np.gradient(u, dx)
+
+        # Kinetic energy density: 0.5 * v^2
+        ek = 0.5 * (v ** 2)
+        # Potential energy density: 0.5 * c^2 * (grad u)^2
+        ep = 0.5 * (c ** 2) * (gx ** 2 + gy ** 2)
+
+        # Total energy integrated over spatial grid cells
+        total_energy = float(np.sum(ek + ep) * (dx ** 2))
+        energies.append(total_energy)
+
+    return np.array(energies)
+
+
 def compute_energy_error(
     predicted_frames: np.ndarray,
     target_frames: np.ndarray,
 ) -> dict:
     """
-    Compute energy conservation error for physics validation.
-
-    Energy proxy: sum of squared pixel values per frame.
+    Compute energy conservation error for physics validation using actual physics.
 
     Args:
         predicted_frames: (T, 1, H, W)
@@ -91,8 +126,8 @@ def compute_energy_error(
     Returns:
         dict with energy curves and relative error.
     """
-    pred_energy = (predicted_frames ** 2).sum(axis=(1, 2, 3))
-    tgt_energy = (target_frames ** 2).sum(axis=(1, 2, 3))
+    pred_energy = compute_wave_energy_physical(predicted_frames)
+    tgt_energy = compute_wave_energy_physical(target_frames)
 
     # Relative energy error per step
     rel_error = np.abs(pred_energy - tgt_energy) / (tgt_energy + 1e-8)
@@ -103,6 +138,7 @@ def compute_energy_error(
         "relative_error": rel_error.tolist(),
         "mean_relative_error": float(rel_error.mean()),
     }
+
 
 
 def create_comparison_gif(
@@ -261,3 +297,53 @@ def evaluate_model(
     print(f"  Results saved to: {output_dir}")
 
     return results
+
+
+def compute_baselines_and_metrics(
+    context_frames: np.ndarray,
+    target_frames: np.ndarray,
+    predicted_frames: np.ndarray,
+) -> dict:
+    """
+    Computes persistence and linear extrapolation baselines, along with physical wave
+    energies for ground truth, predictions, and baselines.
+
+    Args:
+        context_frames: (T_in, 1, H, W) in [-1, 1]
+        target_frames: (T_out, 1, H, W) in [-1, 1]
+        predicted_frames: (T_out, 1, H, W) in [-1, 1]
+    """
+    T_out = target_frames.shape[0]
+
+    # 1. Persistence baseline: repeat final context frame
+    pred_persistence = np.repeat(context_frames[-1:], T_out, axis=0)
+
+    # 2. Linear extrapolation: u_t = u_last + t * velocity
+    # velocity v = u_last - u_prev_to_last
+    v = context_frames[-1] - context_frames[-2]
+    steps = np.arange(1, T_out + 1)[:, np.newaxis, np.newaxis, np.newaxis]
+    pred_linear = np.clip(context_frames[-1] + steps * v, -1.0, 1.0)
+
+    # 3. Evaluate baseline metrics
+    metrics_persist = evaluate_sequence(pred_persistence, target_frames)
+    metrics_linear = evaluate_sequence(pred_linear, target_frames)
+
+    # 4. Compute physical wave energies
+    energy_gt = compute_wave_energy_physical(target_frames)
+    energy_pred = compute_wave_energy_physical(predicted_frames)
+    energy_persist = compute_wave_energy_physical(pred_persistence)
+    energy_linear = compute_wave_energy_physical(pred_linear)
+
+    return {
+        "energy_gt": [float(val) for val in energy_gt],
+        "energy_pred": [float(val) for val in energy_pred],
+
+        "psnr_persistence": [float(val) for val in metrics_persist["psnr_per_step"]],
+        "ssim_persistence": [float(val) for val in metrics_persist["ssim_per_step"]],
+        "energy_persistence": [float(val) for val in energy_persist],
+
+        "psnr_linear": [float(val) for val in metrics_linear["psnr_per_step"]],
+        "ssim_linear": [float(val) for val in metrics_linear["ssim_per_step"]],
+        "energy_linear": [float(val) for val in energy_linear],
+    }
+

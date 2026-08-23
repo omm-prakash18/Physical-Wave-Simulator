@@ -156,6 +156,16 @@ def train(config: Config):
         # Get teacher forcing ratio for this epoch
         tf_ratio = tf_scheduler.get_ratio(epoch)
 
+        # Dynamic rollout curriculum based on epochs
+        if epoch < 5:
+            curr_steps = 3
+        elif epoch < 10:
+            curr_steps = 5
+        elif epoch < 15:
+            curr_steps = 7
+        else:
+            curr_steps = 10
+
         for batch_idx, batch in enumerate(train_loader):
             context = batch["context"].to(device)
             target = batch["target"].to(device)
@@ -168,11 +178,12 @@ def train(config: Config):
                     teacher_forcing_ratio=tf_ratio,
                 )
 
+                # Curriculum slicing on rollout horizon
                 loss, components = criterion(
-                    predicted_frames=output["predicted_frames"],
-                    target_frames=target,
-                    predicted_latents=output["predicted_latents"],
-                    target_latents=output["target_latents"],
+                    predicted_frames=output["predicted_frames"][:, :curr_steps],
+                    target_frames=target[:, :curr_steps],
+                    predicted_latents=output["predicted_latents"][:, :curr_steps],
+                    target_latents=output["target_latents"][:, :curr_steps],
                 )
 
                 # Scale for gradient accumulation
@@ -184,6 +195,17 @@ def train(config: Config):
             # Gradient accumulation step
             if (batch_idx + 1) % config.train.grad_accumulation_steps == 0:
                 scaler.unscale_(optimizer)
+
+                # Calculate layer group gradient norms independently
+                enc_grad = sum(p.grad.norm().item() ** 2 for p in model.encoder.parameters() if p.grad is not None) ** 0.5
+                trans_grad = sum(p.grad.norm().item() ** 2 for p in model.transformer.parameters() if p.grad is not None) ** 0.5
+                dec_grad = sum(p.grad.norm().item() ** 2 for p in model.decoder.parameters() if p.grad is not None) ** 0.5
+
+                if global_step % config.train.log_interval == 0:
+                    writer.add_scalar("gradients/encoder", enc_grad, global_step)
+                    writer.add_scalar("gradients/transformer", trans_grad, global_step)
+                    writer.add_scalar("gradients/decoder", dec_grad, global_step)
+
                 nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 scaler.step(optimizer)
                 scaler.update()
@@ -193,7 +215,7 @@ def train(config: Config):
 
             # Accumulate epoch losses
             for k, v in components.items():
-                epoch_losses[k] += v
+                epoch_losses[k] = epoch_losses.get(k, 0.0) + v
             num_batches += 1
 
             # Per-step logging
@@ -202,6 +224,7 @@ def train(config: Config):
                     writer.add_scalar(k, v, global_step)
                 writer.add_scalar("schedule/lr", optimizer.param_groups[0]["lr"], global_step)
                 writer.add_scalar("schedule/teacher_forcing", tf_ratio, global_step)
+                writer.add_scalar("schedule/curriculum_steps", curr_steps, global_step)
 
         # ─── Epoch summary ──────────────────────────────
         epoch_time = time.time() - epoch_start

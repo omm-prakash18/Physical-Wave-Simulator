@@ -144,27 +144,115 @@ def test_loss_functions():
     assert mse_val.item() >= 0.0
     assert temp_val.item() >= 0.0
 
-    # Test Combined Loss
+    # Test Combined Loss (Fixed Weights)
     encoder = CNNEncoder(in_channels=1, channel_progression=(16, 32, 64, 128), d_model=128)
-    combined = CombinedLoss(
+    combined_fixed = CombinedLoss(
         encoder=encoder,
         lambda_recon=1.0,
         lambda_latent=1.0,
         lambda_perceptual=0.1,
         lambda_temporal=0.5,
+        use_learned_weights=False,
     )
 
-    total, components = combined(
+    total_fixed, components_fixed = combined_fixed(
         predicted_frames=pred_frames,
         target_frames=target_frames,
         predicted_latents=pred_latents,
         target_latents=target_latents,
     )
 
-    assert total.item() > 0.0
-    assert "loss/total" in components
-    assert "loss/recon" in components
-    assert "loss/latent" in components
-    assert "loss/perceptual" in components
-    assert "loss/temporal" in components
+    assert total_fixed.item() > 0.0
+    assert "loss/total" in components_fixed
+    assert "loss/recon" in components_fixed
+    assert "loss/latent" in components_fixed
+    assert "loss/perceptual" in components_fixed
+    assert "loss/temporal" in components_fixed
+
+    # Test Combined Loss (Learned Weights with backward gradients check)
+    combined_learned = CombinedLoss(
+        encoder=encoder,
+        use_learned_weights=True,
+    )
+
+    total_learned, components_learned = combined_learned(
+        predicted_frames=pred_frames,
+        target_frames=target_frames,
+        predicted_latents=pred_latents,
+        target_latents=target_latents,
+    )
+
+    assert total_learned.item() > 0.0
+    assert "loss/total" in components_learned
+    assert "weight/recon" in components_learned
+
+    # Backward check: optimize learned weights
+    total_learned.backward()
+    assert combined_learned.s_recon.grad is not None
+    assert combined_learned.s_latent.grad is not None
+    assert combined_learned.s_perceptual.grad is not None
+    assert combined_learned.s_temporal.grad is not None
+
+
+
+def test_onnx_parity():
+    """Verify that ONNX Runtime predictions match PyTorch predictions within 1e-3 tolerance."""
+    import os
+    import numpy as np
+    import onnxruntime as ort
+
+    onnx_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "checkpoints", "model.onnx"
+    )
+    if not os.path.exists(onnx_path):
+        pytest.skip("model.onnx not found in checkpoints/")
+
+    from model.full_model import LatentVideoPredictor
+
+    # Load PyTorch model
+    checkpoint_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "checkpoints", "best_model.pt"
+    )
+    if not os.path.exists(checkpoint_path):
+        pytest.skip("best_model.pt not found in checkpoints/")
+
+    # Read config state from checkpoint
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    cfg = checkpoint.get("config", {})
+
+    model = LatentVideoPredictor(
+        in_channels=cfg.get("channels", 1),
+        d_model=cfg.get("d_model", 256),
+        encoder_channels=tuple(cfg.get("encoder_channels", (32, 64, 128, 256))),
+        n_layers=cfg.get("n_layers", 6),
+        n_heads=cfg.get("n_heads", 8),
+        d_ff=cfg.get("d_ff", 1024),
+        t_in=cfg.get("t_in", 10),
+        t_out=cfg.get("t_out", 10),
+    )
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    # Create dummy input (1, 10, 1, 64, 64)
+    dummy_input = torch.randn(1, 10, 1, 64, 64)
+
+    # PyTorch inference
+    with torch.no_grad():
+        pt_out = model.predict_autoregressive(dummy_input)
+        pt_frames = pt_out["predicted_frames"].numpy()
+
+    # ONNX inference
+    session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+    input_name = session.get_inputs()[0].name
+    ort_input = {input_name: dummy_input.numpy()}
+    ort_out = session.run(None, ort_input)
+    ort_frames = ort_out[0]
+
+    # Max absolute difference
+    max_diff = np.max(np.abs(pt_frames - ort_frames))
+    print(f"ONNX vs PyTorch max absolute difference: {max_diff}")
+    assert max_diff < 1e-3, f"ONNX and PyTorch outputs do not match within tolerance, max diff: {max_diff}"
+
 

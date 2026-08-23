@@ -117,7 +117,8 @@ class CombinedLoss(nn.Module):
     """
     Weighted combination of all loss components.
 
-    Returns total loss and a dict of individual component values for logging.
+    Supports both fixed hand-tuned weights and learned uncertainty weighting
+    (Kendall et al., homoscedastic task uncertainty weighting).
     """
 
     def __init__(
@@ -127,18 +128,32 @@ class CombinedLoss(nn.Module):
         lambda_latent: float = 1.0,
         lambda_perceptual: float = 0.1,
         lambda_temporal: float = 0.5,
+        use_learned_weights: bool = True,
     ):
         super().__init__()
 
-        self.lambda_recon = lambda_recon
-        self.lambda_latent = lambda_latent
-        self.lambda_perceptual = lambda_perceptual
-        self.lambda_temporal = lambda_temporal
+        self.use_learned_weights = use_learned_weights
 
         self.recon_loss = ReconstructionLoss()
         self.latent_loss = LatentPredictionLoss()
         self.perceptual_loss = PerceptualLoss(encoder)
         self.temporal_loss = TemporalConsistencyLoss()
+
+        if use_learned_weights:
+            # Learned log-variance parameters (s = log(sigma^2))
+            # Initialized such that exp(-s) approximately matches the initial hand-tuned lambdas
+            # lambda = 1.0 -> s = -log(1.0) = 0.0
+            # lambda = 0.1 -> s = -log(0.1) = 2.3025
+            # lambda = 0.5 -> s = -log(0.5) = 0.6931
+            self.s_recon = nn.Parameter(torch.tensor(0.0))
+            self.s_latent = nn.Parameter(torch.tensor(0.0))
+            self.s_perceptual = nn.Parameter(torch.tensor(2.3025))
+            self.s_temporal = nn.Parameter(torch.tensor(0.6931))
+        else:
+            self.lambda_recon = lambda_recon
+            self.lambda_latent = lambda_latent
+            self.lambda_perceptual = lambda_perceptual
+            self.lambda_temporal = lambda_temporal
 
     def forward(
         self,
@@ -152,26 +167,46 @@ class CombinedLoss(nn.Module):
 
         Returns:
             total_loss: Scalar loss tensor for backpropagation.
-            components: Dict of individual loss values (detached floats) for logging.
+            components: Dict of individual loss values and weights for logging.
         """
         l_recon = self.recon_loss(predicted_frames, target_frames)
         l_latent = self.latent_loss(predicted_latents, target_latents)
         l_perceptual = self.perceptual_loss(predicted_frames, target_frames)
         l_temporal = self.temporal_loss(predicted_frames, target_frames)
 
-        total = (
-            self.lambda_recon * l_recon
-            + self.lambda_latent * l_latent
-            + self.lambda_perceptual * l_perceptual
-            + self.lambda_temporal * l_temporal
-        )
-
-        components = {
-            "loss/total": total.item(),
-            "loss/recon": l_recon.item(),
-            "loss/latent": l_latent.item(),
-            "loss/perceptual": l_perceptual.item(),
-            "loss/temporal": l_temporal.item(),
-        }
+        if self.use_learned_weights:
+            # Kendall et al. formula: Loss = exp(-s) * L + 0.5 * s
+            total = (
+                torch.exp(-self.s_recon) * l_recon + 0.5 * self.s_recon
+                + torch.exp(-self.s_latent) * l_latent + 0.5 * self.s_latent
+                + torch.exp(-self.s_perceptual) * l_perceptual + 0.5 * self.s_perceptual
+                + torch.exp(-self.s_temporal) * l_temporal + 0.5 * self.s_temporal
+            )
+            components = {
+                "loss/total": total.item(),
+                "loss/recon": l_recon.item(),
+                "loss/latent": l_latent.item(),
+                "loss/perceptual": l_perceptual.item(),
+                "loss/temporal": l_temporal.item(),
+                "weight/recon": torch.exp(-self.s_recon).item(),
+                "weight/latent": torch.exp(-self.s_latent).item(),
+                "weight/perceptual": torch.exp(-self.s_perceptual).item(),
+                "weight/temporal": torch.exp(-self.s_temporal).item(),
+            }
+        else:
+            total = (
+                self.lambda_recon * l_recon
+                + self.lambda_latent * l_latent
+                + self.lambda_perceptual * l_perceptual
+                + self.lambda_temporal * l_temporal
+            )
+            components = {
+                "loss/total": total.item(),
+                "loss/recon": l_recon.item(),
+                "loss/latent": l_latent.item(),
+                "loss/perceptual": l_perceptual.item(),
+                "loss/temporal": l_temporal.item(),
+            }
 
         return total, components
+

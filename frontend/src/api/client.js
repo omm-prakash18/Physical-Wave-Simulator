@@ -72,5 +72,10 @@ export async function predictUncertainty(frames, numSamples = 20) {
   return res.data;
 }
 
+export async function fetchLatentProbe() {
+  const res = await api.get('/api/latent-probe');
+  return res.data;
+}
+
 export default api;
 
