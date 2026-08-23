@@ -121,7 +121,7 @@ export default function Playground({ isBackendOnline }) {
 
       {/* Parameter Adjustment Card */}
       <Card title="Initial Pulse Wave Parameters" eyebrow="Simulation Control" accent="gold">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 pt-4">
           <Slider
             label="Pulse X Position"
             id="center_x"
@@ -162,7 +162,7 @@ export default function Playground({ isBackendOnline }) {
         </div>
 
         {/* Generate triggers */}
-        <div className="mt-6 flex justify-center border-t border-panel-border/20 pt-4">
+        <div className="mt-8 flex justify-center border-t border-panel-border/20 pt-6">
           <button
             onClick={handleGenerate}
             disabled={loading}

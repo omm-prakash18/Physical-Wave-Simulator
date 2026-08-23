@@ -51,7 +51,7 @@ export default function Layout({ children, isBackendOnline }) {
       <div className="flex-1 flex flex-col min-w-0 z-10">
         {/* Top Header */}
         <header
-          className="h-12 border-b border-panel-border bg-[#15141f]/75 px-6 flex items-center justify-between shrink-0 backdrop-blur-md"
+          className="h-16 border-b border-panel-border bg-[#15141f]/75 px-8 flex items-center justify-between shrink-0 backdrop-blur-md"
           role="banner"
         >
           <div className="flex items-center gap-2.5">
@@ -77,9 +77,9 @@ export default function Layout({ children, isBackendOnline }) {
         </header>
 
         {/* Scrollable Design Canvas Wrapper */}
-        <main className="flex-1 overflow-auto design-canvas p-6 flex flex-col items-center justify-start">
+        <main className="flex-1 overflow-auto design-canvas p-6 md:p-10 flex flex-col items-center justify-start">
           <div
-            className="w-full max-w-6xl space-y-6 transition-smooth"
+            className="w-full max-w-6xl space-y-8 md:space-y-10 transition-smooth"
             style={zoomStyle}
           >
             {children}
@@ -97,10 +97,10 @@ export default function Layout({ children, isBackendOnline }) {
 
       {/* ─── Right Copilot Panel (Desktop only) ─── */}
       <aside
-        className="w-72 border-l border-panel-border bg-[#15141f]/50 flex flex-col justify-between shrink-0 hidden lg:flex z-10 backdrop-blur-2xl"
+        className="w-80 border-l border-panel-border bg-[#15141f]/50 flex flex-col justify-between shrink-0 hidden lg:flex z-10 backdrop-blur-2xl"
         aria-label="Copilot Panel"
       >
-        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
           {/* Panel header */}
           <div className="flex items-center justify-between pb-3 border-b border-panel-border/30">
             <span className="text-xs font-semibold text-text-primary uppercase tracking-wider font-heading">Copilot Panel</span>
@@ -152,7 +152,7 @@ export default function Layout({ children, isBackendOnline }) {
         </div>
 
         {/* Copilot Footer */}
-        <div className="p-4 border-t border-panel-border/30 bg-white/[0.01] flex items-center justify-between text-xs font-mono text-text-secondary/50">
+        <div className="p-6 border-t border-panel-border/30 bg-white/[0.01] flex items-center justify-between text-xs font-mono text-text-secondary/50">
           <span>TensorBoard logs</span>
           <div className="flex gap-2.5">
             <span className="cursor-help hover:text-accent-gold transition-colors" title="Keyboard Shortcuts">⌨</span>

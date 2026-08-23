@@ -38,20 +38,20 @@ export default function Card({
     >
       {/* Header section if title or eyebrow is provided */}
       {(title || eyebrow) && (
-        <div className="px-5 pt-4 pb-2 border-b border-panel-border/30">
+        <div className="px-6 pt-5 pb-3 md:px-8 md:pt-6 md:pb-4 border-b border-panel-border/30">
           {eyebrow && <p className="eyebrow-label mb-1">{eyebrow}</p>}
           {title && <h3 className="text-text-primary font-semibold">{title}</h3>}
         </div>
       )}
 
       {/* Main card body */}
-      <div className="flex-1 p-5">
+      <div className="flex-1 p-6 md:p-8">
         {children}
       </div>
 
       {/* Footer section if provided */}
       {footer && (
-        <div className="px-5 py-3 border-t border-panel-border/30 bg-white/[0.01] rounded-b-panel">
+        <div className="px-6 py-4 md:px-8 md:py-5 border-t border-panel-border/30 bg-white/[0.01] rounded-b-panel">
           {footer}
         </div>
       )}
