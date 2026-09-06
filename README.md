@@ -7,7 +7,7 @@ A full-stack machine learning system that forecasts future frames of physical si
 
 Built with **PyTorch**, **FastAPI**, **React 18**, **Tailwind CSS**, and an elegant **warm professional studio theme** (Outfit + Source Sans 3 + Fira Code).
 
----
+----
 
 ## 🎨 Visual Identity & UI/UX Design
 
